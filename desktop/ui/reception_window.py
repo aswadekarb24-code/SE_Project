@@ -21,6 +21,7 @@ from PyQt6.QtWidgets import (
 )
 
 from common.dto import PatientIntake
+from desktop.broadcast.broadcaster import Broadcaster
 from desktop.services.queue_service import issue_queue_token
 
 _DOB_PATTERN = re.compile(r"^\d{4}-\d{2}-\d{2}$")
@@ -30,9 +31,15 @@ DEPARTMENTS = [(1, "General OPD"), (2, "Pediatrics"), (3, "Orthopedics")]
 
 
 class ReceptionWindow(QWidget):
-    def __init__(self, conn: sqlite3.Connection, parent=None) -> None:
+    def __init__(
+        self,
+        conn: sqlite3.Connection,
+        broadcaster: Broadcaster | None = None,
+        parent=None,
+    ) -> None:
         super().__init__(parent)
         self._conn = conn
+        self._broadcaster = broadcaster
 
         self.full_name_input = QLineEdit()
         self.dob_input = QLineEdit()
@@ -79,7 +86,9 @@ class ReceptionWindow(QWidget):
         )
         department_id = self.department_select.currentData()
 
-        result = issue_queue_token(self._conn, patient, department_id)
+        result = issue_queue_token(
+            self._conn, patient, department_id, broadcaster=self._broadcaster
+        )
 
         self.status_label.setText(f"Token #{result.token_num} issued ({result.status.value})")
         self.full_name_input.clear()

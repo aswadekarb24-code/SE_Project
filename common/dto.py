@@ -74,3 +74,14 @@ class QueueTokenIssued:
     token_num: int
     status: TokenStatus
     broadcast_status: bool
+
+
+@dataclass(frozen=True, slots=True)
+class QueueTokenUpdate:
+    """Result of a queue-token state transition (call_next/complete_token)."""
+
+    token_id: str
+    dept_id: int
+    token_num: int
+    status: TokenStatus
+    broadcast_status: bool
