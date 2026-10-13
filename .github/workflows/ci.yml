@@ -8,6 +8,7 @@ on:
 jobs:
   lint-and-unit:
     strategy:
+      fail-fast: false # see each OS's result even if another one fails
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
     runs-on: ${{ matrix.os }}
@@ -40,7 +41,10 @@ jobs:
           uv run black --check .
 
       - name: Unit tests with coverage
-        run: uv run pytest tests/unit --cov --cov-report=term-missing
+        # -m "not perf": excludes wall-clock latency assertions (NFR-01),
+        # which are inherently flaky on shared/virtualized CI runners --
+        # see the `perf` marker's description in pyproject.toml.
+        run: uv run pytest tests/unit -m "not perf" --cov --cov-report=term-missing
 
   integration:
     runs-on: ubuntu-latest

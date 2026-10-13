@@ -52,6 +52,9 @@ select = ["E", "F", "I", "W"]
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 testpaths = ["tests"]
+markers = [
+    """perf: wall-clock latency assertions against real target hardware (NFR-01). Noisy/flaky on shared, virtualized CI runners (Windows Defender scanning every fsync, NTFS sync-write overhead, noisy-neighbor VMs) -- CI excludes these with `-m "not perf"`. Run them locally for a meaningful signal.""",
+]
 
 [tool.coverage.run]
 source = ["common", "desktop", "gateway"]

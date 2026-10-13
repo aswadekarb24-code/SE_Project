@@ -281,6 +281,7 @@ environment variables (export them yourself, or use a tool like
 | `uv run pytest tests/integration` | LAN broadcast latency, gateway `/health` + `/sync/push`, Last-Write-Wins conflict resolution | `docker compose up -d` first |
 | `uv run pytest --cov --cov-report=term-missing` | Coverage report (target ≥80% per the SQA plan) | same as above |
 | `uv run ruff check .` / `uv run black --check .` | Lint / format | none |
+| `uv run pytest -m perf` | Wall-clock latency assertions (NFR-01, e.g. write latency) | none, but run **locally on real hardware** -- excluded from CI (`-m "not perf"`) since shared/virtualized CI runners (especially Windows) have I/O latency variance unrelated to the app's actual performance; see `docs/progress/cycle-5.md`'s addendum |
 
 Per-cycle metrics (coverage %, write/broadcast latency, soak-test results,
 defect counts) are tracked cumulatively in `docs/progress/cycle-0.md`
