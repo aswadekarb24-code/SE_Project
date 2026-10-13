@@ -103,3 +103,42 @@ for a Windows machine rather than silently claiming it as done.
 - `HMS_REQUIRE_TLS` enforcement is app-level only; actual TLS termination
   (cert management) is explicitly the deploying operator's responsibility
   (reverse proxy or uvicorn flags), not something this codebase manages.
+
+## Addendum: two real cross-OS defects found after the fact
+
+Running `uv sync` for real on Windows and macOS, and CI running on
+`ubuntu-latest`, surfaced two genuine problems this cycle's Linux-only
+verification missed. Both are fixed now; documented here rather than
+silently rewriting the history above.
+
+1. **`sqlcipher3-binary` had no Windows or macOS wheels, ever.** Checking
+   PyPI's actual file listing after the fact showed every released version
+   only published `manylinux` (Linux x86_64) wheels -- `uv sync` failed
+   outright on both Windows and macOS with "doesn't have a source
+   distribution or wheel for the current platform." The fix:
+   `sqlcipher3` (same `coleifer/sqlcipher3` project, no `-binary` suffix)
+   has shipped genuine self-contained wheels for Windows (win32/win_amd64/
+   win_arm64), macOS (universal2/x86_64/arm64), and Linux since 0.6.2 --
+   confirmed against PyPI's file listing and verified as a drop-in
+   (`sqlcipher3.dbapi2`, same API) on this machine before switching
+   `pyproject.toml`. This should have been checked against PyPI's actual
+   wheel matrix *before* picking the dependency in the first place, not
+   after a user hit the failure on a real Windows/macOS machine.
+2. **Ubuntu CI failed to even import PyQt6**: `ImportError:
+   libEGL.so.1: cannot open shared object file`. This Linux sandbox already
+   had the needed system Qt/graphics libraries installed, so Cycle 5's
+   verification never exercised a bare system and never caught this. Root
+   cause (confirmed with `ldd` against the real `libQt6Core/Gui/Widgets/
+   DBus.so` files and the offscreen platform plugin on a clean
+   `ubuntu:24.04` container, then verified by actually instantiating
+   `QApplication`): five missing shared libraries --
+   `libgl1 libegl1 libxkbcommon0 libglib2.0-0 libdbus-1-3`. Added as an
+   explicit install step in `.github/workflows/ci.yml` and documented in
+   `SETUP.md`'s Linux section.
+
+Takeaway carried into future work: "the Linux sandbox can run it" is not
+evidence it works on other platforms or on a minimal Linux install --
+dependency/wheel-availability and system-library claims need to be checked
+against the actual target (PyPI's file listing, a clean container) rather
+than generalized from what happens to already be present in this dev
+environment.

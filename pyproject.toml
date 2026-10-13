@@ -5,7 +5,11 @@ description = "Hybrid Offline-First Hospital Management System"
 requires-python = ">=3.11"
 dependencies = [
     "PyQt6>=6.7",
-    "sqlcipher3-binary>=0.5",
+    # NOT sqlcipher3-binary: that package only ever published manylinux
+    # x86_64 wheels. sqlcipher3 (same coleifer/sqlcipher3 project) has
+    # shipped a self-contained, no-external-deps wheel for Windows, macOS,
+    # and Linux since 0.6.2 -- verified against PyPI's actual file listing.
+    "sqlcipher3>=0.6.2",
 ]
 
 [project.optional-dependencies]

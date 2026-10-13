@@ -19,8 +19,12 @@ instructions (including a clean-VM release checklist), see
 - [`uv`](https://docs.astral.sh/uv/) for dependency management
 - Docker + Docker Compose (for the cloud sync gateway + local Postgres)
 
-No other setup is required on Windows, Linux, or macOS — `uv` and Docker both
-manage their own toolchains.
+`uv` and Docker both manage their own toolchains, so there's little else to
+install — **except** on minimal/headless Linux, where PyQt6 needs a handful
+of system graphics/IPC libraries it doesn't bundle itself. See
+[`SETUP.md`](SETUP.md#21-install-prerequisites) for the exact (verified,
+not guessed) package list — the same one `.github/workflows/ci.yml` installs
+for CI.
 
 ## Setup
 

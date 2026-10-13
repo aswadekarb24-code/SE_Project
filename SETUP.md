@@ -151,9 +151,19 @@ curl -LsSf https://astral.sh/uv/install.sh | sh
 # then: sudo systemctl enable --now docker
 ```
 
-PyQt6's wheels are generally self-contained; if the app fails to launch
-with a missing shared-library error (commonly `libxcb-cursor.so` on
-Debian/Ubuntu), install your distro's Qt6/X11 runtime packages.
+PyQt6's wheels bundle Qt itself but not the underlying system graphics/IPC
+libraries Qt links against — on a minimal install (including bare CI
+runners) you may need to install them yourself. On Debian/Ubuntu:
+
+```bash
+sudo apt install libgl1 libegl1 libxkbcommon0 libglib2.0-0 libdbus-1-3
+```
+
+This exact list was verified with `ldd` against the real Qt6 shared
+libraries on a clean `ubuntu:24.04` container (see `.github/workflows/ci.yml`,
+which installs the same packages for CI) — not guessed. Arch/Fedora/etc.
+typically have these as transitive dependencies of a `qt6-base`-equivalent
+package already.
 
 ### 2.2 Clone and install dependencies
 
@@ -235,9 +245,12 @@ docker compose down -v
 
 ### 3.4 Notes
 
-- PyQt6 and `sqlcipher3-binary` both ship prebuilt wheels for macOS (Intel
-  and Apple Silicon); a plain `uv sync` should not require Xcode Command
-  Line Tools or a system Qt install.
+- PyQt6 and `sqlcipher3` both ship prebuilt wheels for macOS (Intel and
+  Apple Silicon, universal2); a plain `uv sync` should not require Xcode
+  Command Line Tools or a system Qt install. (Note: the dependency is
+  `sqlcipher3`, not the similarly-named `sqlcipher3-binary` — the latter
+  only ever published Linux x86_64 wheels and would fail to install here;
+  see `pyproject.toml`'s comment on this.)
 - The Windows `.exe` cannot be built or run on macOS — PyInstaller
   cross-compilation isn't supported; that part of packaging needs an actual
   Windows machine or VM (see §1.5–1.7).

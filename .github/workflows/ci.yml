@@ -14,6 +14,20 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # PyQt6 needs these system Qt/EGL/GLib/DBus libraries to even import,
+      # including under QT_QPA_PLATFORM=offscreen (tests/conftest.py) --
+      # they aren't bundled in the PyQt6 wheels since they're expected to be
+      # system-provided, and bare Ubuntu runners don't have them installed.
+      # This exact list was verified with `ldd` against the actual Qt6
+      # shared libraries (libQt6Core/Gui/Widgets/DBus.so + the offscreen
+      # platform plugin) on a clean ubuntu:24.04 container, then confirmed
+      # by actually instantiating QApplication -- not guessed.
+      - name: Install Qt system dependencies (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libgl1 libegl1 libxkbcommon0 libglib2.0-0 libdbus-1-3
+
       - name: Install uv
         uses: astral-sh/setup-uv@v3
 
@@ -33,6 +47,14 @@ jobs:
     needs: lint-and-unit
     steps:
       - uses: actions/checkout@v4
+
+      # Same as lint-and-unit: PyQt6 is imported at test-collection time
+      # (tests/conftest.py) even for tests/integration, which doesn't touch
+      # the UI itself. See that job's step for how this list was verified.
+      - name: Install Qt system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libgl1 libegl1 libxkbcommon0 libglib2.0-0 libdbus-1-3
 
       - name: Install uv
         uses: astral-sh/setup-uv@v3
