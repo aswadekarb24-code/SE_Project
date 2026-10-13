@@ -9,6 +9,10 @@ See `PLAN.md` for the project brief and `docs/` for the original planning
 documents. The implementation plan (spiral-model cycles, architecture,
 testing/metrics strategy) lives in `docs/progress/`.
 
+**For full per-OS setup, testing, and Windows `.exe`/installer build
+instructions (including a clean-VM release checklist), see
+[`SETUP.md`](SETUP.md).** The sections below are a quick-start summary.
+
 ## Requirements
 
 - Python 3.11+
@@ -71,7 +75,7 @@ production; local docker-compose dev has no cert, so this stays off there.
 ## Packaging (Windows .exe)
 
 ```bash
-# One-folder build, for fast dev iteration (produces dist/HMS/HMS.exe on Windows)
+# One-folder build, for fast dev iteration (produces dist/HMS/HMS.exe)
 uv run pyinstaller build/pyinstaller.spec
 
 # One-file build, for an actual release artifact (produces dist/HMS.exe)
@@ -82,8 +86,10 @@ Both specs exclude `tests/`, `gateway/`, and dev-only packages, so the
 desktop build never bundles FastAPI/SQLAlchemy/pytest/etc. `build/installer.iss`
 wraps the one-file build into a Windows installer via
 [Inno Setup](https://jrsoftware.org/isinfo.php) — compile it on Windows
-after the release build. See `docs/progress/cycle-5.md` for what's been
-verified on Linux vs. what still needs an actual Windows machine.
+after the release build. See **[`SETUP.md`](SETUP.md#15-build-the-windows-exe)**
+for the full step-by-step Windows build + installer + clean-VM verification
+checklist, and `docs/progress/cycle-5.md` for what's been verified on Linux
+vs. what still needs an actual Windows machine.
 
 ## Project layout
 

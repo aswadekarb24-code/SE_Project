@@ -16,9 +16,14 @@ uv-cache/
 .coverage
 htmlcov/
 
-# build artifacts
-build/dist/
-build/work/
+# PyInstaller output: `pyinstaller build/*.spec` (no --distpath/--workpath
+# override) writes the binary to ./dist at the repo root, and intermediate
+# files to build/<spec-name>/ (e.g. build/pyinstaller/, build/pyinstaller.release/)
+# -- alongside, not over, the committed .spec/.iss files in build/.
+/dist/
+build/pyinstaller/
+build/pyinstaller.release/
+build/installer-output/
 *.spec.bak
 
 # env files
