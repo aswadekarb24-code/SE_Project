@@ -1,10 +1,12 @@
 """Entry point for the desktop app.
 
 The local SQLite DB (WAL mode) is migrated and seeded with MVP reference
-data on startup; a NoOpSyncProvider is wired up (unused until Cycle 4's sync
-worker exists). A role is chosen at launch (Receptionist or Doctor), and only
-that role's screens are shown -- see desktop/services/auth_service.py for
-why this is UI-level gating, not a full auth system.
+data on startup. The sync layer defaults to NoOpSyncProvider -- fully
+offline -- unless HMS_GATEWAY_URL is set (desktop/config.py), in which case
+a real FastAPISyncProvider drives a background SyncScheduler. A role is
+chosen at launch (Receptionist or Doctor), and only that role's screens are
+shown -- see desktop/services/auth_service.py for why this is UI-level
+gating, not a full auth system.
 """
 
 from __future__ import annotations
@@ -15,9 +17,13 @@ from PyQt6.QtWidgets import QApplication, QMainWindow, QTabWidget
 
 from common.sync_provider import NoOpSyncProvider
 from desktop.broadcast.udp_broadcaster import UdpBroadcaster
+from desktop.config import GATEWAY_URL, SYNC_INTERVAL_SECONDS
 from desktop.data.db import connect, migrate
 from desktop.data.seed import seed_default_data
 from desktop.services.auth_service import Role
+from desktop.sync.providers.fastapi_provider import FastAPISyncProvider
+from desktop.sync.sync_scheduler import SyncScheduler
+from desktop.sync.sync_worker import SyncWorker
 from desktop.ui.doctor_window import DoctorWindow
 from desktop.ui.reception_window import ReceptionWindow
 from desktop.ui.role_select_dialog import RoleSelectDialog
@@ -35,8 +41,14 @@ class MainWindow(QMainWindow):
         self.conn = connect(db_path) if db_path else connect()
         migrate(self.conn)
         seed_default_data(self.conn)
-        self.sync_provider = NoOpSyncProvider()
         self.broadcaster = UdpBroadcaster()
+
+        self.sync_provider = FastAPISyncProvider(GATEWAY_URL) if GATEWAY_URL else NoOpSyncProvider()
+        self.sync_worker = SyncWorker(self.conn, self.sync_provider)
+        self.sync_scheduler = SyncScheduler(
+            self.sync_worker, interval_seconds=SYNC_INTERVAL_SECONDS
+        )
+        self.sync_scheduler.start()
 
         self.role = role if role is not None else self._prompt_for_role()
         self.setCentralWidget(self._build_tabs_for_role(self.role))
@@ -58,6 +70,7 @@ class MainWindow(QMainWindow):
         return tabs
 
     def closeEvent(self, event) -> None:  # noqa: N802 (Qt override signature)
+        self.sync_scheduler.stop()
         self.broadcaster.close()
         self.conn.close()
         super().closeEvent(event)

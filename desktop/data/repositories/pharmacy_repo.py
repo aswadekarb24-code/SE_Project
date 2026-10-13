@@ -24,6 +24,23 @@ class PharmacyStockRepository:
     def count(self) -> int:
         return self._conn.execute("SELECT COUNT(*) FROM pharmacy_stock").fetchone()[0]
 
+    def get(self, item_id: str) -> dict | None:
+        row = self._conn.execute(
+            """SELECT item_id, name, quantity, low_stock_threshold, created_at, updated_at
+               FROM pharmacy_stock WHERE item_id = ?""",
+            (item_id,),
+        ).fetchone()
+        if row is None:
+            return None
+        return {
+            "item_id": row[0],
+            "name": row[1],
+            "quantity": row[2],
+            "low_stock_threshold": row[3],
+            "created_at": row[4],
+            "updated_at": row[5],
+        }
+
     def insert(
         self, *, item_id: str, name: str, quantity: int, low_stock_threshold: int = 10
     ) -> None:

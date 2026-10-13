@@ -45,8 +45,8 @@ uv run ruff check .
 uv run black .
 ```
 
-The gateway exposes `GET /health` at `http://localhost:8000/health` once the
-Compose stack is up.
+The gateway exposes `GET /health` and `POST /sync/push` once the Compose
+stack is up.
 
 ## Configuration
 
@@ -54,6 +54,12 @@ Copy `.env.example` to `.env` and adjust `DATABASE_URL` to point at a real
 Supabase/Postgres instance when ready — this is the only change needed to
 move the sync layer from local dev to production (see `SyncProvider` in
 `common/sync_provider.py`).
+
+By default the desktop app stays fully offline (`NoOpSyncProvider`). Set
+`HMS_GATEWAY_URL` (e.g. `http://localhost:8000`, with the Compose stack up)
+to enable the real background sync worker, which pushes pending changes
+every `HMS_SYNC_INTERVAL_SECONDS` (default 30) and resolves conflicts via
+Last-Write-Wins (see `desktop/sync/`).
 
 ## Project layout
 

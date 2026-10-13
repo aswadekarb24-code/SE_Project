@@ -23,8 +23,9 @@ class QueueTokensRepository:
 
     def get(self, token_id: str) -> dict | None:
         row = self._conn.execute(
-            "SELECT token_id, patient_id, dept_id, token_num, status FROM queue_tokens "
-            "WHERE token_id = ?",
+            """SELECT token_id, patient_id, dept_id, token_num, status,
+                      issued_date, created_at, updated_at
+               FROM queue_tokens WHERE token_id = ?""",
             (token_id,),
         ).fetchone()
         if row is None:
@@ -35,6 +36,9 @@ class QueueTokensRepository:
             "dept_id": row[2],
             "token_num": row[3],
             "status": row[4],
+            "issued_date": row[5],
+            "created_at": row[6],
+            "updated_at": row[7],
         }
 
     def get_oldest_waiting(self, dept_id: int) -> str | None:

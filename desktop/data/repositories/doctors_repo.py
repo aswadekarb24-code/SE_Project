@@ -21,6 +21,23 @@ class DoctorsRepository:
     def count(self) -> int:
         return self._conn.execute("SELECT COUNT(*) FROM doctors").fetchone()[0]
 
+    def get(self, doctor_id: str) -> dict | None:
+        row = self._conn.execute(
+            """SELECT doctor_id, full_name, dept_id, status, created_at, updated_at
+               FROM doctors WHERE doctor_id = ?""",
+            (doctor_id,),
+        ).fetchone()
+        if row is None:
+            return None
+        return {
+            "doctor_id": row[0],
+            "full_name": row[1],
+            "dept_id": row[2],
+            "status": row[3],
+            "created_at": row[4],
+            "updated_at": row[5],
+        }
+
     def insert(
         self, *, doctor_id: str, full_name: str, dept_id: int, status: str = "AVAILABLE"
     ) -> None:

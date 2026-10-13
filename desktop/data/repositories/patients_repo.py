@@ -16,6 +16,24 @@ class PatientsRepository:
         ).fetchone()
         return row is not None
 
+    def get(self, patient_id: str) -> dict | None:
+        row = self._conn.execute(
+            """SELECT patient_id, full_name, dob, gender, contact_no, created_at, updated_at
+               FROM patients WHERE patient_id = ?""",
+            (patient_id,),
+        ).fetchone()
+        if row is None:
+            return None
+        return {
+            "patient_id": row[0],
+            "full_name": row[1],
+            "dob": row[2],
+            "gender": row[3],
+            "contact_no": row[4],
+            "created_at": row[5],
+            "updated_at": row[6],
+        }
+
     def insert(
         self,
         *,

@@ -19,6 +19,22 @@ class BedsRepository:
     def count(self) -> int:
         return self._conn.execute("SELECT COUNT(*) FROM beds").fetchone()[0]
 
+    def get(self, bed_id: str) -> dict | None:
+        row = self._conn.execute(
+            """SELECT bed_id, label, status, created_at, updated_at
+               FROM beds WHERE bed_id = ?""",
+            (bed_id,),
+        ).fetchone()
+        if row is None:
+            return None
+        return {
+            "bed_id": row[0],
+            "label": row[1],
+            "status": row[2],
+            "created_at": row[3],
+            "updated_at": row[4],
+        }
+
     def insert(self, *, bed_id: str, label: str, status: str = "AVAILABLE") -> None:
         timestamp = now_iso()
         self._conn.execute(
