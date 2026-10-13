@@ -1,0 +1,14 @@
+tests/
+desktop/
+display_sim/
+docs/
+build/
+.git/
+.github/
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.ruff_cache/
+htmlcov/
+.coverage

@@ -1,0 +1,29 @@
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+.uv/
+uv-cache/
+
+# local SQLite DB files
+*.db
+*.db-wal
+*.db-shm
+
+# test/coverage artifacts
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# build artifacts
+build/dist/
+build/work/
+*.spec.bak
+
+# env files
+.env
+
+# OS cruft
+.DS_Store
+Thumbs.db

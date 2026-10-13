@@ -1,0 +1,37 @@
+# Local dev stand-in for Supabase: Postgres + the FastAPI gateway.
+# `docker compose up -d` is the single entrypoint on any OS.
+# Swapping this for real Supabase later is a DATABASE_URL change only.
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: hms
+      POSTGRES_PASSWORD: hms
+      POSTGRES_DB: hms
+    ports:
+      - "5433:5432"  # host 5433 to avoid clashing with any local Postgres on 5432
+    volumes:
+      - hms_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U hms -d hms"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  gateway:
+    build:
+      context: .
+      dockerfile: docker/gateway.Dockerfile
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgresql+psycopg://hms:hms@postgres:5432/hms
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+volumes:
+  hms_postgres_data:
