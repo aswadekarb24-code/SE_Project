@@ -1,7 +1,5 @@
-"""Receptionist check-in screen: Cycle 1's demoable feature -- full offline
-patient intake + queue token issuance, with keyboard-friendly fields per the
-UI design doc. No department/doctor directory yet (that's Cycle 3); a small
-fixed list stands in until then.
+"""Receptionist check-in screen: full offline patient intake + queue token
+issuance, with keyboard-friendly fields per the UI design doc.
 """
 
 from __future__ import annotations
@@ -22,12 +20,10 @@ from PyQt6.QtWidgets import (
 
 from common.dto import PatientIntake
 from desktop.broadcast.broadcaster import Broadcaster
+from desktop.services.department_service import list_departments
 from desktop.services.queue_service import issue_queue_token
 
 _DOB_PATTERN = re.compile(r"^\d{4}-\d{2}-\d{2}$")
-
-# Placeholder until Cycle 3 introduces a real departments table.
-DEPARTMENTS = [(1, "General OPD"), (2, "Pediatrics"), (3, "Orthopedics")]
 
 
 class ReceptionWindow(QWidget):
@@ -47,7 +43,7 @@ class ReceptionWindow(QWidget):
         self.gender_input = QLineEdit()
         self.contact_input = QLineEdit()
         self.department_select = QComboBox()
-        for dept_id, name in DEPARTMENTS:
+        for dept_id, name in list_departments(conn):
             self.department_select.addItem(name, dept_id)
 
         self.issue_button = QPushButton("Issue Token")

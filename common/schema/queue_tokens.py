@@ -8,7 +8,7 @@ DDL = """
 CREATE TABLE IF NOT EXISTS queue_tokens (
     token_id     TEXT PRIMARY KEY,
     patient_id   TEXT NOT NULL REFERENCES patients(patient_id),
-    dept_id      INTEGER NOT NULL,
+    dept_id      INTEGER NOT NULL REFERENCES departments(dept_id),
     token_num    INTEGER NOT NULL,
     status       TEXT NOT NULL DEFAULT 'WAITING'
                  CHECK (status IN ('WAITING', 'CALLED', 'DONE')),

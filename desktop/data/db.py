@@ -10,16 +10,24 @@ from __future__ import annotations
 import sqlite3
 from pathlib import Path
 
+from common.schema.beds import DDL as BEDS_DDL
+from common.schema.departments import DDL as DEPARTMENTS_DDL
+from common.schema.doctors import DDL as DOCTORS_DDL
 from common.schema.patients import DDL as PATIENTS_DDL
+from common.schema.pharmacy_stock import DDL as PHARMACY_STOCK_DDL
 from common.schema.queue_tokens import DDL as QUEUE_TOKENS_DDL
 from common.schema.sync_audit_log import DDL as SYNC_AUDIT_LOG_DDL
 
-# Appended to as each cycle introduces new tables (doctors/beds/pharmacy_stock
-# in Cycle 3). Order matters: patients must exist before queue_tokens (FK).
+# Order matters: departments before doctors/queue_tokens (FK), patients
+# before queue_tokens (FK).
 MIGRATIONS: list[str] = [
     SYNC_AUDIT_LOG_DDL,
+    DEPARTMENTS_DDL,
     PATIENTS_DDL,
     QUEUE_TOKENS_DDL,
+    DOCTORS_DDL,
+    BEDS_DDL,
+    PHARMACY_STOCK_DDL,
 ]
 
 DEFAULT_DB_PATH = Path.home() / ".hms" / "hms.db"

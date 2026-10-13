@@ -1,7 +1,6 @@
 """Doctor console: Call Next / Complete Consultation, driving the queue-token
 state machine (WAITING -> CALLED -> DONE) and broadcasting each transition to
-LAN display clients. No department/doctor directory yet (Cycle 3); reuses the
-same placeholder list as the Reception screen.
+LAN display clients.
 """
 
 from __future__ import annotations
@@ -11,8 +10,8 @@ import sqlite3
 from PyQt6.QtWidgets import QComboBox, QLabel, QPushButton, QVBoxLayout, QWidget
 
 from desktop.broadcast.broadcaster import Broadcaster
+from desktop.services.department_service import list_departments
 from desktop.services.queue_service import call_next, complete_token
-from desktop.ui.reception_window import DEPARTMENTS
 
 
 class DoctorWindow(QWidget):
@@ -28,7 +27,7 @@ class DoctorWindow(QWidget):
         self._current_token_id: str | None = None
 
         self.department_select = QComboBox()
-        for dept_id, name in DEPARTMENTS:
+        for dept_id, name in list_departments(conn):
             self.department_select.addItem(name, dept_id)
 
         self.call_next_button = QPushButton("Call Next")
