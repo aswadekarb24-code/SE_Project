@@ -61,6 +61,30 @@ to enable the real background sync worker, which pushes pending changes
 every `HMS_SYNC_INTERVAL_SECONDS` (default 30) and resolves conflicts via
 Last-Write-Wins (see `desktop/sync/`).
 
+The local SQLite DB is encrypted at rest via SQLCipher (NFR-02). Set
+`HMS_DB_ENCRYPTION_KEY` to a real secret for any non-dev deployment — if
+unset, `desktop/data/db.py` falls back to a fixed, publicly-known dev key so
+local dev/tests work with zero setup. Set `HMS_REQUIRE_TLS=true` on the
+gateway once a TLS-terminating reverse proxy is in front of it in
+production; local docker-compose dev has no cert, so this stays off there.
+
+## Packaging (Windows .exe)
+
+```bash
+# One-folder build, for fast dev iteration (produces dist/HMS/HMS.exe on Windows)
+uv run pyinstaller build/pyinstaller.spec
+
+# One-file build, for an actual release artifact (produces dist/HMS.exe)
+uv run pyinstaller build/pyinstaller.release.spec
+```
+
+Both specs exclude `tests/`, `gateway/`, and dev-only packages, so the
+desktop build never bundles FastAPI/SQLAlchemy/pytest/etc. `build/installer.iss`
+wraps the one-file build into a Windows installer via
+[Inno Setup](https://jrsoftware.org/isinfo.php) — compile it on Windows
+after the release build. See `docs/progress/cycle-5.md` for what's been
+verified on Linux vs. what still needs an actual Windows machine.
+
 ## Project layout
 
 - `common/` — schema, shared DTOs, the `SyncProvider` DI boundary, LAN

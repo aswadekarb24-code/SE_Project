@@ -5,6 +5,7 @@ description = "Hybrid Offline-First Hospital Management System"
 requires-python = ">=3.11"
 dependencies = [
     "PyQt6>=6.7",
+    "sqlcipher3-binary>=0.5",
 ]
 
 [project.optional-dependencies]
@@ -16,6 +17,7 @@ dev = [
     "black>=24.0",
     "ruff>=0.5",
     "httpx>=0.27",
+    "pyinstaller>=6.10",
 ]
 gateway = [
     "fastapi>=0.111",

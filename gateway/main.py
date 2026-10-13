@@ -11,7 +11,9 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from sqlalchemy import text
+from starlette.middleware.httpsredirect import HTTPSRedirectMiddleware
 
+from gateway.config import REQUIRE_TLS
 from gateway.db import engine
 from gateway.models import Base
 from gateway.routers.sync import router as sync_router
@@ -25,6 +27,13 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="HMS Cloud Sync Gateway", lifespan=lifespan)
 app.include_router(sync_router)
+
+if REQUIRE_TLS:
+    # NFR-02: refuse plain HTTP when TLS is expected to be in place (a
+    # reverse proxy or uvicorn --ssl-certfile/--ssl-keyfile terminates it;
+    # see gateway/config.py). Off by default so local docker-compose dev
+    # -- which has no cert -- keeps working over plain HTTP.
+    app.add_middleware(HTTPSRedirectMiddleware)
 
 
 @app.get("/health")
