@@ -13,6 +13,7 @@ import sqlite3
 from uuid import uuid4
 
 from desktop.data.repositories.beds_repo import BedsRepository
+from desktop.data.repositories.doctor_schedules_repo import DoctorSchedulesRepository
 from desktop.data.repositories.doctors_repo import DoctorsRepository
 from desktop.data.repositories.pharmacy_repo import PharmacyStockRepository
 
@@ -48,6 +49,14 @@ DOCTORS = [
     ("Dr. Rohan Gupta", 3),
 ]
 
+# Default weekly OPD hours for the seeded doctors: (days, start, end).
+DOCTOR_SCHEDULES = {
+    "Dr. Asha Rao": ("Mon,Tue,Wed,Thu,Fri", "09:00", "13:00"),
+    "Dr. Vikram Shah": ("Mon,Wed,Fri,Sat", "14:00", "18:00"),
+    "Dr. Meera Nair": ("Mon,Tue,Wed,Thu,Fri,Sat", "10:00", "14:00"),
+    "Dr. Rohan Gupta": ("Tue,Thu,Sat", "09:30", "12:30"),
+}
+
 
 def seed_default_data(conn: sqlite3.Connection) -> None:
     beds_repo = BedsRepository(conn)
@@ -64,3 +73,18 @@ def seed_default_data(conn: sqlite3.Connection) -> None:
     if doctors_repo.count() == 0:
         for name, dept_id in DOCTORS:
             doctors_repo.insert(doctor_id=str(uuid4()), full_name=name, dept_id=dept_id)
+
+    # Also runs on databases seeded before schedules existed: the seeded
+    # doctors get default OPD hours the first time this table is empty.
+    schedules_repo = DoctorSchedulesRepository(conn)
+    if schedules_repo.count() == 0:
+        for doctor in doctors_repo.list_all():
+            hours = DOCTOR_SCHEDULES.get(doctor["full_name"])
+            if hours is not None:
+                days, start_time, end_time = hours
+                schedules_repo.upsert(
+                    doctor_id=doctor["doctor_id"],
+                    opd_days=days,
+                    start_time=start_time,
+                    end_time=end_time,
+                )

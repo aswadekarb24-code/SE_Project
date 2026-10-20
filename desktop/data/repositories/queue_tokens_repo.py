@@ -49,6 +49,81 @@ class QueueTokensRepository:
         ).fetchone()
         return row[0] if row else None
 
+    def get_latest_called(self, dept_id: int, issued_date: str) -> str | None:
+        """The department's most recently called token that hasn't been
+        completed yet, so a doctor who logs out mid-consultation picks up
+        where they left off.
+        """
+        row = self._conn.execute(
+            """SELECT token_id FROM queue_tokens
+               WHERE dept_id = ? AND issued_date = ? AND status = 'CALLED'
+               ORDER BY updated_at DESC LIMIT 1""",
+            (dept_id, issued_date),
+        ).fetchone()
+        return row[0] if row else None
+
+    def list_for_date(self, issued_date: str, dept_id: int | None = None) -> list[dict]:
+        """A day's tokens (optionally one department's) with patient and
+        department details, in queue order.
+        """
+        sql = """SELECT t.token_id, t.token_num, t.status, t.dept_id, d.name,
+                        p.patient_id, p.patient_number, p.full_name, t.updated_at
+                 FROM queue_tokens t
+                 JOIN patients p ON p.patient_id = t.patient_id
+                 JOIN departments d ON d.dept_id = t.dept_id
+                 WHERE t.issued_date = ?"""
+        params: list = [issued_date]
+        if dept_id is not None:
+            sql += " AND t.dept_id = ?"
+            params.append(dept_id)
+        sql += " ORDER BY t.dept_id, t.token_num"
+        rows = self._conn.execute(sql, params).fetchall()
+        return [
+            {
+                "token_id": r[0],
+                "token_num": r[1],
+                "status": r[2],
+                "dept_id": r[3],
+                "dept_name": r[4],
+                "patient_id": r[5],
+                "patient_number": r[6],
+                "full_name": r[7],
+                "updated_at": r[8],
+            }
+            for r in rows
+        ]
+
+    def list_for_patient(self, patient_id: str) -> list[dict]:
+        """A patient's visits (one per token), newest first."""
+        rows = self._conn.execute(
+            """SELECT t.token_id, t.token_num, t.status, t.issued_date, d.name
+               FROM queue_tokens t JOIN departments d ON d.dept_id = t.dept_id
+               WHERE t.patient_id = ?
+               ORDER BY t.created_at DESC, t.rowid DESC""",
+            (patient_id,),
+        ).fetchall()
+        return [
+            {
+                "token_id": r[0],
+                "token_num": r[1],
+                "status": r[2],
+                "issued_date": r[3],
+                "dept_name": r[4],
+            }
+            for r in rows
+        ]
+
+    def count_by_status(self, issued_date: str, dept_id: int | None = None) -> dict[str, int]:
+        sql = "SELECT status, COUNT(*) FROM queue_tokens WHERE issued_date = ?"
+        params: list = [issued_date]
+        if dept_id is not None:
+            sql += " AND dept_id = ?"
+            params.append(dept_id)
+        counts = {"WAITING": 0, "CALLED": 0, "DONE": 0}
+        for status, count in self._conn.execute(sql + " GROUP BY status", params):
+            counts[status] = count
+        return counts
+
     def update_status(self, token_id: str, new_status: str) -> None:
         timestamp = now_iso()
         self._conn.execute(

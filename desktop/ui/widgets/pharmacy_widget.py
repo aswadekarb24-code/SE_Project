@@ -1,83 +1,103 @@
-"""Medicine stock search with low-stock warning + quantity adjustment."""
+"""Medicine stock table: search, low-stock flag, +/- buttons for single
+units and "Receive" for a delivery of any size, on every row.
+"""
 
 from __future__ import annotations
 
 import sqlite3
 
-from PyQt6.QtCore import Qt
-from PyQt6.QtGui import QColor
-from PyQt6.QtWidgets import (
-    QHBoxLayout,
-    QLineEdit,
-    QListWidget,
-    QListWidgetItem,
-    QPushButton,
-    QVBoxLayout,
-    QWidget,
-)
+from PyQt6.QtCore import Qt, pyqtSignal
+from PyQt6.QtWidgets import QHeaderView, QInputDialog, QVBoxLayout, QWidget
 
-from common import design_tokens as tokens
 from desktop.services.pharmacy_service import adjust_stock, search_stock
+from desktop.ui.components import Badge, button, cell, empty_state, search_field, table, table_item
+
+_NAME, _QUANTITY, _THRESHOLD, _STATUS, _ADJUST = range(5)
 
 
 class PharmacyWidget(QWidget):
+    changed = pyqtSignal()
+
     def __init__(self, conn: sqlite3.Connection, parent=None) -> None:
         super().__init__(parent)
         self._conn = conn
 
-        self.search_input = QLineEdit()
-        self.search_input.setPlaceholderText("Search medicine...")
+        self.search_input = search_field("Search medicine...")
         self.search_input.textChanged.connect(self.refresh)
 
-        self.list_widget = QListWidget()
-        self.list_widget.currentItemChanged.connect(self._on_selection_changed)
-
-        self.increase_button = QPushButton("+1")
-        self.increase_button.clicked.connect(lambda: self._adjust(1))
-        self.decrease_button = QPushButton("-1")
-        self.decrease_button.clicked.connect(lambda: self._adjust(-1))
-        self.increase_button.setEnabled(False)
-        self.decrease_button.setEnabled(False)
-
-        buttons_row = QHBoxLayout()
-        buttons_row.setAlignment(Qt.AlignmentFlag.AlignLeft)
-        buttons_row.addWidget(self.decrease_button)
-        buttons_row.addWidget(self.increase_button)
+        self.table = table(["Medicine", "In stock", "Low-stock at", "Status", "Adjust"])
+        header = self.table.horizontalHeader()
+        header.setSectionResizeMode(_NAME, QHeaderView.ResizeMode.Stretch)
+        for column, width in ((_QUANTITY, 110), (_THRESHOLD, 130), (_STATUS, 130), (_ADJUST, 220)):
+            header.setSectionResizeMode(column, QHeaderView.ResizeMode.Fixed)
+            self.table.setColumnWidth(column, width)
+        self.empty = empty_state("No medicines match", "Try a different search.", "pill")
+        self.empty.hide()
 
         layout = QVBoxLayout(self)
-        layout.setSpacing(12)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(14)
         layout.addWidget(self.search_input)
-        layout.addWidget(self.list_widget)
-        layout.addLayout(buttons_row)
+        layout.addWidget(self.table, 1)
+        layout.addWidget(self.empty, 1)
 
         self.refresh()
 
+    def items(self) -> list[dict]:
+        return [
+            self.table.item(row, _NAME).data(Qt.ItemDataRole.UserRole)
+            for row in range(self.table.rowCount())
+        ]
+
     def refresh(self) -> None:
-        self.list_widget.clear()
-        for item in search_stock(self._conn, self.search_input.text().strip()):
-            label = f"{item['name']} -- qty {item['quantity']}"
-            if item["low_stock"]:
-                label += "  [LOW STOCK]"
-            list_item = QListWidgetItem(label)
-            if item["low_stock"]:
-                list_item.setForeground(QColor(tokens.DANGER))
-            list_item.setData(Qt.ItemDataRole.UserRole, item["item_id"])
-            self.list_widget.addItem(list_item)
-        self.increase_button.setEnabled(False)
-        self.decrease_button.setEnabled(False)
+        scroll = self.table.verticalScrollBar().value()
+        stock = search_stock(self._conn, self.search_input.text().strip())
+        self.table.setRowCount(0)
+        for row, item in enumerate(stock):
+            self.table.insertRow(row)
+            self.table.setItem(row, _NAME, table_item(item["name"], data=item))
+            self.table.setItem(row, _QUANTITY, table_item(str(item["quantity"])))
+            self.table.setItem(
+                row, _THRESHOLD, table_item(str(item["low_stock_threshold"]), muted=True)
+            )
+            badge = (
+                Badge("Low stock", "danger") if item["low_stock"] else Badge("In stock", "success")
+            )
+            self.table.setCellWidget(row, _STATUS, cell(badge))
+            decrease = button("−")
+            decrease.setObjectName("stepButton")
+            decrease.setToolTip(f"Remove one {item['name']}")
+            decrease.setEnabled(item["quantity"] > 0)
+            decrease.clicked.connect(lambda _c, iid=item["item_id"]: self._adjust(iid, -1))
+            increase = button("+")
+            increase.setObjectName("stepButton")
+            increase.setToolTip(f"Add one {item['name']}")
+            increase.clicked.connect(lambda _c, iid=item["item_id"]: self._adjust(iid, 1))
+            receive = button("Receive", "ghost")
+            receive.setToolTip(f"Add a delivery of {item['name']}")
+            receive.clicked.connect(lambda _c, it=item: self.receive(it))
+            self.table.setCellWidget(row, _ADJUST, cell(decrease, increase, receive, spacing=8))
+        self.table.setVisible(bool(stock))
+        self.empty.setVisible(not stock)
+        self.table.verticalScrollBar().setValue(scroll)
 
-    def _on_selection_changed(self, current, _previous) -> None:
-        enabled = current is not None
-        self.increase_button.setEnabled(enabled)
-        self.decrease_button.setEnabled(enabled)
+    def receive(self, item: dict) -> None:
+        """Add a delivery: ask how many units arrived, then add them at once."""
+        quantity, accepted = QInputDialog.getInt(
+            self,
+            "Receive stock",
+            f"Units of {item['name']} received:",
+            value=10,
+            min=1,
+            max=100_000,
+        )
+        if accepted:
+            self._adjust(item["item_id"], quantity)
 
-    def _adjust(self, delta: int) -> None:
-        current = self.list_widget.currentItem()
-        if current is None:
-            return
-        item_id = current.data(Qt.ItemDataRole.UserRole)
+    def _adjust(self, item_id: str, delta: int) -> None:
         try:
             adjust_stock(self._conn, item_id, delta)
         except ValueError:
-            pass  # e.g. tried to go below zero -- ignore, UI just stays as-is
+            return  # e.g. would go below zero -- nothing changes
         self.refresh()
+        self.changed.emit()

@@ -12,7 +12,9 @@ import sqlite3
 from collections.abc import Callable
 
 from desktop.data.repositories.beds_repo import BedsRepository
+from desktop.data.repositories.doctor_schedules_repo import DoctorSchedulesRepository
 from desktop.data.repositories.doctors_repo import DoctorsRepository
+from desktop.data.repositories.medical_reports_repo import MedicalReportsRepository
 from desktop.data.repositories.patients_repo import PatientsRepository
 from desktop.data.repositories.pharmacy_repo import PharmacyStockRepository
 from desktop.data.repositories.queue_tokens_repo import QueueTokensRepository
@@ -25,6 +27,8 @@ ENTITY_ROW_FETCHERS: dict[str, RowFetcher] = {
     "doctors": lambda conn, record_id: DoctorsRepository(conn).get(record_id),
     "beds": lambda conn, record_id: BedsRepository(conn).get(record_id),
     "pharmacy_stock": lambda conn, record_id: PharmacyStockRepository(conn).get(record_id),
+    "medical_reports": lambda conn, record_id: MedicalReportsRepository(conn).get(record_id),
+    "doctor_schedules": lambda conn, record_id: DoctorSchedulesRepository(conn).get(record_id),
 }
 
 # Primary-key column per table. Values come only from this fixed allow-list
@@ -37,6 +41,8 @@ _PRIMARY_KEY_COLUMN: dict[str, str] = {
     "doctors": "doctor_id",
     "beds": "bed_id",
     "pharmacy_stock": "item_id",
+    "medical_reports": "report_id",
+    "doctor_schedules": "doctor_id",
 }
 
 

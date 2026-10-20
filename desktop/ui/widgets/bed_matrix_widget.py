@@ -4,7 +4,8 @@ from __future__ import annotations
 
 import sqlite3
 
-from PyQt6.QtCore import Qt
+from PyQt6.QtCore import Qt, pyqtSignal
+from PyQt6.QtGui import QCursor
 from PyQt6.QtWidgets import QGridLayout, QPushButton, QWidget
 
 from common import design_tokens as tokens
@@ -20,11 +21,14 @@ _COLUMNS = 5
 
 
 class BedMatrixWidget(QWidget):
+    changed = pyqtSignal()
+
     def __init__(self, conn: sqlite3.Connection, parent=None) -> None:
         super().__init__(parent)
         self._conn = conn
         self._layout = QGridLayout(self)
-        self._layout.setSpacing(12)
+        self._layout.setContentsMargins(0, 0, 0, 0)
+        self._layout.setSpacing(14)
         self._layout.setAlignment(Qt.AlignmentFlag.AlignTop)
         self._buttons: dict[str, QPushButton] = {}
         self.refresh()
@@ -34,21 +38,31 @@ class BedMatrixWidget(QWidget):
             button = self._buttons.get(bed["bed_id"])
             if button is None:
                 button = QPushButton()
+                button.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
+                button.setToolTip("Click to change status")
                 button.clicked.connect(lambda _checked, bid=bed["bed_id"]: self._on_toggle(bid))
                 index = len(self._buttons)
                 self._layout.addWidget(button, index // _COLUMNS, index % _COLUMNS)
                 self._buttons[bed["bed_id"]] = button
             self._style_button(button, bed)
 
+    def counts(self) -> dict[str, int]:
+        counts = dict.fromkeys(_COLORS, 0)
+        for bed in list_beds(self._conn):
+            counts[bed["status"]] += 1
+        return counts
+
     def _style_button(self, button: QPushButton, bed: dict) -> None:
         button.setText(f"{bed['label']}\n{bed['status']}")
         text, tint, border = _COLORS[bed["status"]]
         button.setStyleSheet(
             f"QPushButton {{ background: {tint}; color: {text}; border: 1px solid {border};"
-            f" border-radius: {tokens.RADIUS_TILE}px; min-height: 72px; font-weight: 500; }}"
-            f" QPushButton:hover {{ border-color: {text}; }}"
+            f" border-radius: {tokens.RADIUS_TILE + 4}px; min-height: 96px; font-weight: 600;"
+            f" font-size: 14px; }}"
+            f" QPushButton:hover {{ border: 1px solid {text}; }}"
         )
 
     def _on_toggle(self, bed_id: str) -> None:
         toggle_bed(self._conn, bed_id)
         self.refresh()
+        self.changed.emit()

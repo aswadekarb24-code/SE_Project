@@ -74,6 +74,7 @@ class QueueTokenIssued:
     token_num: int
     status: TokenStatus
     broadcast_status: bool
+    patient_number: str
 
 
 @dataclass(frozen=True, slots=True)

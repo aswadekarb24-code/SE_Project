@@ -1,8 +1,8 @@
 """Application-wide Qt theme built from common/design_tokens.py.
 
-Visual only. Widgets opt into variants through a dynamic property
-(`variant="primary"`) or an object name (`statusLabel`), the Qt equivalent
-of CSS classes and ids, so no widget structure has to change.
+Widgets opt into styles through object names (`card`, `pageTitle`, ...)
+and dynamic properties (`variant="primary"`, `tone="success"`), the Qt
+equivalents of CSS ids and classes. desktop/ui/components.py sets them.
 """
 
 from __future__ import annotations
@@ -12,135 +12,272 @@ from string import Template
 
 from PyQt6.QtCore import QDir
 from PyQt6.QtGui import QColor, QFont, QFontDatabase, QPalette
-from PyQt6.QtWidgets import QApplication, QComboBox, QStyledItemDelegate, QWidget
+from PyQt6.QtWidgets import QApplication
 
 from common import design_tokens as tokens
 
 _ASSETS_DIR = Path(__file__).parent / "assets"
 
-# Pill tabs: content height + vertical padding + border, so the radius can be
-# exactly half the height (Qt squares off radii larger than that).
-_TAB_CONTENT_HEIGHT = 20
-_TAB_PADDING_Y = 8
-_TAB_HEIGHT = _TAB_CONTENT_HEIGHT + 2 * _TAB_PADDING_Y + 2
+# Text on the brand panel's dark gradient, and unselected segment text on
+# its grey track -- each checked for >= 4.5:1 contrast.
+_EXTRA = {
+    "BRAND_TEXT": "#C8D3E6",
+    "BRAND_SOFT": "#93A3BD",
+    "SEGMENT_TEXT": "#5B6270",
+    "NEUTRAL_TEXT": "#4B5260",
+    "NEUTRAL_TINT": "#F1F2F4",
+    "SERVING_BORDER": "#DCE9FB",
+}
 
 _STYLESHEET = Template("""
-/* Canvas, shell and card ------------------------------------------------ */
+/* Canvas and shells ---------------------------------------------------- */
 QMainWindow { background: $CANVAS; }
-QMainWindow > QTabWidget {
+QFrame#shell, QFrame#authShell {
     background: $SHELL;
     border: none;
     border-radius: ${RADIUS_SHELL}px;
 }
-QTabWidget::tab-bar { left: ${SPACE_3}px; }
-QTabWidget::pane {
+QLabel { color: $TEXT_PRIMARY; background: transparent; }
+
+/* Sign-in brand panel --------------------------------------------------- */
+QFrame#brandPanel {
+    background: qlineargradient(x1:0, y1:0, x2:1, y2:1, stop:0 $DARK_ACCENT, stop:1 #17325A);
+    border-radius: 24px;
+}
+QFrame#brandPanel QLabel { color: $TEXT_ON_ACCENT; }
+QLabel#brandName { font-size: 17px; font-weight: 600; }
+QLabel#brandHeadline { font-size: 34px; font-weight: 600; letter-spacing: -0.6px; }
+QFrame#brandPanel QLabel#brandText { color: $BRAND_TEXT; font-size: 15px; }
+QFrame#brandPanel QLabel#brandFeature { color: $BRAND_TEXT; font-size: 14px; }
+QFrame#brandPanel QLabel#brandFoot { color: $BRAND_SOFT; font-size: 12px; }
+QLabel#brandIcon { background: rgba(255, 255, 255, 26); border-radius: 10px; }
+QLabel#logoChip { background: $PRIMARY; border-radius: 13px; }
+QLabel#authTitle { font-size: 28px; font-weight: 600; letter-spacing: -0.5px; }
+
+/* Sidebar --------------------------------------------------------------- */
+QFrame#sidebar {
+    background: $SURFACE;
+    border: 1px solid $BORDER;
+    border-radius: 22px;
+}
+QToolButton#navButton { background: transparent; border: none; border-radius: 13px; }
+QToolButton#navButton:hover { background: $HOVER; }
+QToolButton#navButton:checked { background: $PRIMARY_TINT; }
+
+/* Header ---------------------------------------------------------------- */
+QLabel#pageTitle { font-size: 30px; font-weight: 600; letter-spacing: -0.6px; }
+QLabel#pageSubtitle { font-size: 14px; color: $TEXT_SECONDARY; }
+QLabel#dateChip {
+    background: $SURFACE;
+    border: 1px solid $BORDER_STRONG;
+    border-radius: 19px;
+    padding: 0 16px;
+    font-weight: 500;
+}
+QFrame#userChip {
+    background: $SURFACE;
+    border: 1px solid $BORDER_STRONG;
+    border-radius: 24px;
+}
+QLabel#chipName { font-size: 13px; font-weight: 600; }
+QFrame#syncChip {
+    background: $SURFACE;
+    border: 1px solid $BORDER_STRONG;
+    border-radius: 19px;
+}
+QFrame#syncChip[tone="synced"] { background: $PRIMARY_TINT; border-color: #CFE3FD; }
+QFrame#syncChip[tone="offline"] { background: $WARNING_TINT; border-color: $WARNING_BORDER; }
+QFrame#syncChip[tone="conflict"] { background: $DANGER_TINT; border-color: $DANGER_BORDER; }
+QLabel#syncDot { border-radius: 4px; background: $TEXT_DISABLED; }
+QLabel#syncDot[tone="synced"] { background: $ACCENT; }
+QLabel#syncDot[tone="offline"] { background: #E8A10C; }
+QLabel#syncDot[tone="conflict"] { background: $DANGER; }
+QLabel#syncText { font-size: 13px; font-weight: 600; }
+QLabel#syncText[tone="synced"] { color: $PRIMARY; }
+QLabel#syncText[tone="offline"] { color: $WARNING; }
+QLabel#syncText[tone="conflict"] { color: $DANGER; }
+QToolButton#syncRetry { background: transparent; border: none; border-radius: 14px; }
+QToolButton#syncRetry:hover { background: rgba(0, 0, 0, 15); }
+QLabel#chipRole { font-size: 12px; color: $TEXT_SECONDARY; }
+
+/* Cards and stat tiles -------------------------------------------------- */
+QFrame#card, QFrame#statCard {
     background: $SURFACE;
     border: 1px solid $BORDER;
     border-radius: ${RADIUS_CARD}px;
-    margin: ${SPACE_2}px ${SPACE_3}px ${SPACE_3}px ${SPACE_3}px;
-    padding: ${SPACE_3}px;
+}
+QLabel#cardTitle { font-size: 18px; font-weight: 600; letter-spacing: -0.2px; }
+QLabel#statLabel { font-size: 14px; font-weight: 500; }
+QLabel#statValue { font-size: 32px; font-weight: 600; letter-spacing: -0.8px; }
+QLabel#statCaption { font-size: 13px; color: $TEXT_SECONDARY; }
+QFrame#actionRow {
+    background: $SURFACE_SUBTLE;
+    border: 1px solid $BORDER;
+    border-radius: 14px;
+}
+QFrame#listRow { border: none; border-bottom: 1px solid $DIVIDER; }
+
+/* Text roles ------------------------------------------------------------ */
+QLabel#fieldLabel { font-size: 13px; font-weight: 600; color: $TEXT_SECONDARY; }
+QLabel#sectionLabel { font-size: 14px; font-weight: 600; }
+QLabel#muted { font-size: 13px; color: $TEXT_SECONDARY; }
+QLabel#cellTitle { font-size: 14px; font-weight: 500; }
+QLabel#detailName { font-size: 21px; font-weight: 600; letter-spacing: -0.3px; }
+QLabel#dialogTitle { font-size: 19px; font-weight: 600; }
+QLabel#infoValue { font-size: 14px; }
+QLabel#emptyTitle { font-size: 15px; font-weight: 600; }
+QLabel#errorLabel {
+    color: $DANGER;
+    background: $DANGER_TINT;
+    border: 1px solid $DANGER_BORDER;
+    border-radius: 10px;
+    padding: 9px 12px;
+    font-size: 13px;
+}
+QLabel#successBanner {
+    color: $SUCCESS;
+    background: $SUCCESS_TINT;
+    border: 1px solid $SUCCESS_BORDER;
+    border-radius: 10px;
+    padding: 10px 14px;
+    font-weight: 600;
 }
 
-/* Top tabs: separate pills, dark fill when active ----------------------- */
-QTabBar { qproperty-drawBase: 0; background: transparent; }
-QTabBar::tab {
-    background: $SURFACE;
-    color: $TEXT_PRIMARY;
-    border: 1px solid $BORDER_STRONG;
-    border-radius: ${TAB_RADIUS}px;
-    height: ${TAB_CONTENT_HEIGHT}px;
-    padding: ${TAB_PADDING_Y}px 18px;
-    margin-top: ${SPACE_3}px;
-    margin-right: ${SPACE_1}px;
-    font-weight: 500;
-    text-transform: uppercase; /* font capitalization only; label text unchanged */
+/* Status badges --------------------------------------------------------- */
+QLabel#badge {
+    border-radius: ${RADIUS_BADGE}px;
+    padding: 3px 10px;
+    font-size: 12px;
+    font-weight: 600;
 }
-QTabBar::tab:hover:!selected { background: $HOVER; }
-QTabBar::tab:selected {
-    background: $DARK_ACCENT;
-    border-color: $DARK_ACCENT;
-    color: $TEXT_ON_ACCENT;
-}
+QLabel#badge[tone="success"] { background: $SUCCESS_TINT; color: $SUCCESS; }
+QLabel#badge[tone="danger"] { background: $DANGER_TINT; color: $DANGER; }
+QLabel#badge[tone="warning"] { background: $WARNING_TINT; color: $WARNING; }
+QLabel#badge[tone="info"] { background: $PRIMARY_TINT; color: $PRIMARY; }
+QLabel#badge[tone="neutral"] { background: $NEUTRAL_TINT; color: $NEUTRAL_TEXT; }
 
-/* Text ------------------------------------------------------------------ */
-QLabel { color: $TEXT_PRIMARY; background: transparent; }
-ReceptionWindow QLabel {
-    min-height: 40px; /* same as the inputs, so form labels centre on them */
-    color: $TEXT_SECONDARY;
-    font-size: ${FONT_SIZE_LABEL}px;
-    font-weight: 500;
+/* Check-in result and the doctor's now-serving panel --------------------- */
+QFrame#tokenBanner {
+    background: $SUCCESS_TINT;
+    border: 1px solid $SUCCESS_BORDER;
+    border-radius: 18px;
 }
-QLabel#statusLabel {
-    color: $TEXT_PRIMARY;
-    font-size: ${FONT_SIZE_LEAD}px;
-    font-weight: 400;
+QLabel#tokenNumber { font-size: 40px; font-weight: 700; color: $SUCCESS; }
+QLabel#bannerTitle { font-size: 17px; font-weight: 600; }
+QLabel#bannerText { font-size: 13px; color: $SUCCESS; }
+QFrame#servingPanel {
+    background: qlineargradient(x1:0, y1:0, x2:1, y2:1, stop:0 #F3F8FF, stop:1 #FAF6FF);
+    border: 1px solid $SERVING_BORDER;
+    border-radius: 16px;
 }
-DoctorWindow QLabel#statusLabel {
-    background: $SURFACE;
-    border: 1px solid qlineargradient(x1:0, y1:0, x2:1, y2:1,
-                                      stop:0 $HIGHLIGHT_START, stop:1 $HIGHLIGHT_END);
-    border-radius: ${RADIUS_TILE}px;
-    padding: 20px 22px;
-    font-size: ${FONT_SIZE_FEATURE}px;
-}
+QFrame#vDivider { background: $SERVING_BORDER; border: none; }
+QLabel#tokenCaption { font-size: 12px; font-weight: 600; color: $PRIMARY; letter-spacing: 1px; }
+QLabel#tokenHero { font-size: 64px; font-weight: 600; letter-spacing: -2px; }
 
-/* Buttons: outlined by default, solid blue for the primary action ------- */
+/* Buttons --------------------------------------------------------------- */
 QPushButton {
     background: $SURFACE;
     color: $TEXT_PRIMARY;
     border: 1px solid $BORDER_STRONG;
-    border-radius: ${RADIUS_BUTTON}px;
-    min-height: 30px;
+    border-radius: ${RADIUS_INPUT}px;
+    min-height: 34px;
     padding: 0 16px;
-    font-weight: 500;
+    font-weight: 600;
 }
 QPushButton:hover { background: $HOVER; border-color: $BORDER_HOVER; }
 QPushButton:pressed { background: $PRESSED; }
 QPushButton:focus { border-color: $ACCENT; }
-QPushButton:disabled {
-    background: $HOVER;
-    color: $TEXT_DISABLED;
-    border-color: $BORDER;
-}
+QPushButton:disabled { background: $HOVER; color: $TEXT_DISABLED; border-color: $BORDER; }
 QPushButton[variant="primary"] {
     background: $PRIMARY;
     color: $TEXT_ON_ACCENT;
     border-color: $PRIMARY;
 }
 QPushButton[variant="primary"]:hover,
-QPushButton[variant="primary"]:focus {
-    background: $PRIMARY_HOVER;
-    border-color: $PRIMARY_HOVER;
-}
+QPushButton[variant="primary"]:focus { background: $PRIMARY_HOVER; border-color: $PRIMARY_HOVER; }
 QPushButton[variant="primary"]:disabled {
     background: $PRIMARY_DISABLED;
     border-color: $PRIMARY_DISABLED;
     color: $TEXT_ON_ACCENT;
 }
-PharmacyWidget QPushButton { min-width: 48px; }
+QPushButton[variant="ghost"] {
+    background: transparent;
+    border: none;
+    color: $PRIMARY;
+    padding: 0 6px;
+}
+QPushButton[variant="ghost"]:hover { color: $PRIMARY_HOVER; text-decoration: underline; }
+QPushButton[variant="ghost"]:disabled { color: $TEXT_DISABLED; background: transparent; }
+QPushButton[size="tall"] { min-height: 42px; border-radius: 12px; padding: 0 20px; }
+QPushButton#pillButton { min-height: 36px; border-radius: 19px; padding: 0 16px; }
+QPushButton#stepButton {
+    min-width: 32px;
+    max-width: 32px;
+    min-height: 30px;
+    padding: 0;
+    border-radius: 8px;
+    font-size: 16px;
+}
 
-/* Inputs and dropdowns -------------------------------------------------- */
-QLineEdit, QComboBox {
+QPushButton#dayToggle { min-width: 46px; padding: 0 8px; border-radius: 10px; }
+QPushButton#dayToggle:checked {
+    background: $PRIMARY_TINT;
+    border-color: $ACCENT;
+    color: $PRIMARY;
+}
+
+QCheckBox { spacing: 10px; color: $TEXT_SECONDARY; font-size: 13px; }
+QCheckBox::indicator {
+    width: 18px;
+    height: 18px;
+    border: 1px solid $BORDER_HOVER;
+    border-radius: 5px;
+    background: $SURFACE;
+}
+QCheckBox::indicator:hover { border-color: $ACCENT; }
+QCheckBox::indicator:checked {
+    background: $PRIMARY;
+    border-color: $PRIMARY;
+    image: url(hms:check-white.svg);
+}
+QLabel#shortcutHint { font-size: 12px; color: $TEXT_SECONDARY; }
+
+/* Segmented control ------------------------------------------------------ */
+QFrame#segmented { background: $PRESSED; border-radius: 12px; }
+QPushButton#segment {
+    background: transparent;
+    border: 1px solid transparent;
+    border-radius: 9px;
+    min-height: 32px;
+    padding: 0 14px;
+    color: $SEGMENT_TEXT;
+}
+QPushButton#segment:hover:!checked { color: $TEXT_PRIMARY; }
+QPushButton#segment:checked {
+    background: $SURFACE;
+    border-color: $BORDER_STRONG;
+    color: $TEXT_PRIMARY;
+}
+
+/* Inputs ---------------------------------------------------------------- */
+QLineEdit, QComboBox, QPlainTextEdit {
     background: $SURFACE;
     color: $TEXT_PRIMARY;
     border: 1px solid $BORDER_STRONG;
     border-radius: ${RADIUS_INPUT}px;
-    min-height: 38px;
-    padding: 0 12px;
     selection-background-color: $PRIMARY_TINT;
     selection-color: $TEXT_PRIMARY;
 }
-QLineEdit:hover, QComboBox:hover { border-color: $BORDER_HOVER; }
-/* Qt stylesheets cannot draw an outer focus ring, so focus thickens the
-   border instead, with 1px less padding so the text does not shift. */
-QLineEdit:focus, QComboBox:focus, QComboBox:on {
-    border: 2px solid $ACCENT;
-    padding: 0 11px;
-}
+QLineEdit, QComboBox { min-height: 38px; padding: 0 12px; }
+QPlainTextEdit { padding: 8px 10px; }
+QLineEdit:hover, QComboBox:hover, QPlainTextEdit:hover { border-color: $BORDER_HOVER; }
+/* Qt can't draw an outer focus ring, so focus thickens the border and
+   trims the padding by the same 1px so text doesn't shift. */
+QLineEdit:focus, QComboBox:focus, QComboBox:on { border: 2px solid $ACCENT; padding: 0 11px; }
+QPlainTextEdit:focus { border: 2px solid $ACCENT; padding: 7px 9px; }
 QLineEdit:disabled, QComboBox:disabled { background: $HOVER; color: $TEXT_DISABLED; }
-/* Form-style screens read as one comfortable column inside the card. */
-ReceptionWindow, DoctorWindow, DoctorAvailabilityWidget { max-width: 640px; }
-DoctorAvailabilityWidget QComboBox { min-width: 200px; max-width: 240px; }
+QLineEdit#searchField { border-radius: 20px; padding-left: 6px; }
+QLineEdit#searchField:focus { padding-left: 5px; }
 
 QComboBox { padding-right: 36px; combobox-popup: 0; }
 QComboBox:focus, QComboBox:on { padding-right: 35px; }
@@ -156,39 +293,49 @@ QComboBox QAbstractItemView {
     background: $SURFACE;
     color: $TEXT_PRIMARY;
     border: 1px solid $BORDER;
-    border-radius: ${RADIUS_INPUT}px;
     padding: 4px;
     outline: 0;
-    selection-background-color: $PRIMARY_TINT;
-    selection-color: $PRIMARY;
 }
-QComboBox QAbstractItemView::item {
-    min-height: 34px;
-    padding: 0 10px;
-    border-radius: ${RADIUS_BADGE}px;
-}
+QComboBox QAbstractItemView::item { min-height: 34px; padding: 0 10px; border-radius: 6px; }
 QComboBox QAbstractItemView::item:hover { background: $HOVER; color: $TEXT_PRIMARY; }
 QComboBox QAbstractItemView::item:selected { background: $PRIMARY_TINT; color: $PRIMARY; }
 
-/* Lists: airy rows, faint dividers, tinted selection -------------------- */
-QListWidget {
+/* Tables ---------------------------------------------------------------- */
+QTableWidget {
     background: $SURFACE;
     color: $TEXT_PRIMARY;
+    border: none;
+    outline: 0;
+    selection-background-color: $PRIMARY_TINT;
+    selection-color: $TEXT_PRIMARY;
+}
+QTableWidget::item { border-bottom: 1px solid $DIVIDER; padding: 0 12px; }
+QTableWidget::item:selected { background: $PRIMARY_TINT; color: $TEXT_PRIMARY; }
+QHeaderView { background: transparent; border: none; }
+QHeaderView::section {
+    background: $SURFACE_SUBTLE;
+    color: $TEXT_SECONDARY;
+    border: none;
+    border-bottom: 1px solid $BORDER;
+    padding: 0 12px;
+    font-size: 13px;
+    font-weight: 600;
+}
+QHeaderView::section:first { border-top-left-radius: 10px; }
+QHeaderView::section:last { border-top-right-radius: 10px; }
+QTableCornerButton::section { background: $SURFACE_SUBTLE; border: none; }
+
+/* Lists ----------------------------------------------------------------- */
+QListWidget#resultsList {
+    background: $SURFACE;
     border: 1px solid $BORDER;
-    border-radius: ${RADIUS_TILE}px;
-    padding: 4px 8px;
+    border-radius: 12px;
+    padding: 4px;
     outline: 0;
 }
-QListWidget::item {
-    padding: 14px 8px;
-    border-bottom: 1px solid $DIVIDER;
-}
-QListWidget::item:hover { background: $HOVER; }
-QListWidget::item:selected {
-    background: $PRIMARY_TINT;
-    color: $PRIMARY;
-    border-bottom-color: $PRIMARY_TINT;
-}
+QListWidget#resultsList::item { border-radius: 10px; margin: 1px 0; }
+QListWidget#resultsList::item:hover { background: $HOVER; }
+QListWidget#resultsList::item:selected { background: $PRIMARY_TINT; }
 
 /* Scrollbars ------------------------------------------------------------ */
 QScrollBar:vertical { background: transparent; width: 10px; margin: 4px 2px; }
@@ -200,25 +347,22 @@ QScrollBar::handle:hover { background: $TEXT_DISABLED; }
 QScrollBar::add-line, QScrollBar::sub-line { width: 0; height: 0; }
 QScrollBar::add-page, QScrollBar::sub-page { background: transparent; }
 
-/* Dialogs: role picker and message boxes -------------------------------- */
+/* Dialogs and tooltips -------------------------------------------------- */
 QDialog { background: $SURFACE; }
-RoleSelectDialog QLabel {
-    font-size: ${FONT_SIZE_TITLE}px;
-    letter-spacing: -0.2px;
+QTextBrowser#reportPreview {
+    background: $SURFACE;
+    border: 1px solid $BORDER;
+    border-radius: 12px;
+    padding: 18px;
 }
-RoleSelectDialog QPushButton {
-    min-height: 46px;
-    min-width: 280px;
-    border-radius: ${RADIUS_TILE}px;
-    font-size: 15px;
+QMessageBox QPushButton { min-width: 80px; }
+QToolTip {
+    background: $DARK_ACCENT;
+    color: $TEXT_ON_ACCENT;
+    border: none;
+    padding: 6px 10px;
+    font-size: 12px;
 }
-RoleSelectDialog QPushButton:hover,
-RoleSelectDialog QPushButton:focus {
-    background: $PRIMARY_TINT;
-    border-color: $ACCENT;
-    color: $PRIMARY;
-}
-QMessageBox QPushButton { min-width: 72px; }
 """)
 
 
@@ -233,11 +377,7 @@ def pick_font_family() -> str:
 
 def build_stylesheet() -> str:
     values = {name: value for name, value in vars(tokens).items() if name.isupper()}
-    values.update(
-        TAB_CONTENT_HEIGHT=_TAB_CONTENT_HEIGHT,
-        TAB_PADDING_Y=_TAB_PADDING_Y,
-        TAB_RADIUS=_TAB_HEIGHT // 2,
-    )
+    values.update(_EXTRA)
     return _STYLESHEET.substitute(values)
 
 
@@ -255,6 +395,8 @@ def _build_palette() -> QPalette:
         QPalette.ColorRole.HighlightedText: tokens.TEXT_PRIMARY,
         QPalette.ColorRole.PlaceholderText: tokens.TEXT_MUTED,
         QPalette.ColorRole.Link: tokens.PRIMARY,
+        QPalette.ColorRole.ToolTipBase: tokens.DARK_ACCENT,
+        QPalette.ColorRole.ToolTipText: tokens.TEXT_ON_ACCENT,
     }
     for role, color in roles.items():
         palette.setColor(role, QColor(color))
@@ -265,15 +407,6 @@ def _build_palette() -> QPalette:
     ):
         palette.setColor(QPalette.ColorGroup.Disabled, role, QColor(tokens.TEXT_DISABLED))
     return palette
-
-
-def style_combo_popups(root: QWidget) -> None:
-    """QComboBox popups default to a QItemDelegate, which ignores the
-    stylesheet's ::item rules (row height, padding). Give every combo under
-    `root` a QStyledItemDelegate so its popup rows match the theme.
-    """
-    for combo in root.findChildren(QComboBox):
-        combo.setItemDelegate(QStyledItemDelegate(combo))
 
 
 def apply_theme(app: QApplication) -> None:

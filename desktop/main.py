@@ -3,43 +3,49 @@
 The local SQLite DB (WAL mode) is migrated and seeded with MVP reference
 data on startup. The sync layer defaults to NoOpSyncProvider -- fully
 offline -- unless HMS_GATEWAY_URL is set (desktop/config.py), in which case
-a real FastAPISyncProvider drives a background SyncScheduler. A role is
-chosen at launch (Receptionist or Doctor), and only that role's screens are
-shown -- see desktop/services/auth_service.py for why this is UI-level
-gating, not a full auth system.
+a real FastAPISyncProvider drives a background SyncScheduler.
+
+The window opens on the sign-in screen. Signing in builds the workspace
+for that account's role (desktop/ui/app_shell.py); logging out tears it
+down and returns to sign-in, so nothing from one user's session is left
+on screen for the next.
 """
 
 from __future__ import annotations
 
 import sys
 
-from PyQt6.QtCore import Qt
-from PyQt6.QtWidgets import QApplication, QMainWindow, QTabWidget
+from PyQt6.QtCore import QTimer
+from PyQt6.QtWidgets import QApplication, QMainWindow, QStackedWidget
 
 from common.sync_provider import NoOpSyncProvider
 from desktop.broadcast.udp_broadcaster import UdpBroadcaster
 from desktop.config import GATEWAY_URL, SYNC_INTERVAL_SECONDS
 from desktop.data.db import connect, migrate
 from desktop.data.seed import seed_default_data
-from desktop.services.auth_service import Role
+from desktop.services.auth_service import AuthenticatedUser
+from desktop.services.doctor_service import broadcast_all_doctors
 from desktop.sync.providers.fastapi_provider import FastAPISyncProvider
 from desktop.sync.sync_scheduler import SyncScheduler
 from desktop.sync.sync_worker import SyncWorker
-from desktop.ui.doctor_window import DoctorWindow
-from desktop.ui.reception_window import ReceptionWindow
-from desktop.ui.role_select_dialog import RoleSelectDialog
-from desktop.ui.theme import apply_theme, style_combo_popups
-from desktop.ui.widgets.bed_matrix_widget import BedMatrixWidget
-from desktop.ui.widgets.doctor_availability_widget import DoctorAvailabilityWidget
-from desktop.ui.widgets.pharmacy_widget import PharmacyWidget
+from desktop.ui.app_shell import AppShell
+from desktop.ui.auth_page import AuthPage
+from desktop.ui.theme import apply_theme
+
+APP_TITLE = "Hybrid Offline-First HMS"
+# How often every doctor's status is re-broadcast, so a display that
+# started late or missed a UDP packet catches up.
+DOCTOR_HEARTBEAT_MS = 30_000
 
 
 class MainWindow(QMainWindow):
-    def __init__(self, db_path=None, role: Role | None = None) -> None:
+    def __init__(self, db_path=None, user: AuthenticatedUser | None = None) -> None:
+        """`user` skips the sign-in screen (used by tests)."""
         super().__init__()
-        self.setWindowTitle("Hybrid Offline-First HMS")
-        self.resize(1120, 720)
-        # Visual only: a strip of canvas around the rounded app shell.
+        self.setWindowTitle(APP_TITLE)
+        self.resize(1260, 760)
+        self.setMinimumSize(1100, 700)
+        # A strip of canvas around the rounded app shell.
         self.setContentsMargins(16, 16, 16, 16)
 
         self.conn = connect(db_path) if db_path else connect()
@@ -54,30 +60,58 @@ class MainWindow(QMainWindow):
         )
         self.sync_scheduler.start()
 
-        self.role = role if role is not None else self._prompt_for_role()
-        self.setCentralWidget(self._build_tabs_for_role(self.role))
-        style_combo_popups(self)
+        self.doctor_heartbeat = QTimer(self)
+        self.doctor_heartbeat.setInterval(DOCTOR_HEARTBEAT_MS)
+        self.doctor_heartbeat.timeout.connect(
+            lambda: broadcast_all_doctors(self.conn, self.broadcaster)
+        )
+        self.doctor_heartbeat.start()
 
-    def _prompt_for_role(self) -> Role:
-        dialog = RoleSelectDialog(self)
-        dialog.exec()
-        return dialog.selected_role or Role.RECEPTIONIST
+        self.screens = QStackedWidget()
+        self.auth_page = AuthPage(self.conn)
+        self.auth_page.authenticated.connect(self.sign_in)
+        self.screens.addWidget(self.auth_page)
+        self.setCentralWidget(self.screens)
+        self.shell: AppShell | None = None
 
-    def _build_tabs_for_role(self, role: Role) -> QTabWidget:
-        tabs = QTabWidget()
-        # Lets the stylesheet paint the rounded shell behind tabs + pane.
-        tabs.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
-        if role == Role.RECEPTIONIST:
-            tabs.addTab(ReceptionWindow(self.conn, broadcaster=self.broadcaster), "Reception")
-            tabs.addTab(BedMatrixWidget(self.conn), "Beds")
-            tabs.addTab(PharmacyWidget(self.conn), "Pharmacy")
-        else:
-            tabs.addTab(DoctorWindow(self.conn, broadcaster=self.broadcaster), "Doctor Console")
-            tabs.addTab(DoctorAvailabilityWidget(self.conn), "Doctor Availability")
-        return tabs
+        if user is not None:
+            self.sign_in(user)
+
+    @property
+    def user(self) -> AuthenticatedUser | None:
+        return self.shell.user if self.shell else None
+
+    def sign_in(self, user: AuthenticatedUser) -> None:
+        self._discard_shell()
+        self.shell = AppShell(
+            self.conn,
+            user,
+            self.broadcaster,
+            sync_scheduler=self.sync_scheduler,
+            gateway_url=GATEWAY_URL,
+        )
+        self.shell.logout_requested.connect(self.logout)
+        self.screens.addWidget(self.shell)
+        self.screens.setCurrentWidget(self.shell)
+        self.setWindowTitle(f"{APP_TITLE} · {user.display_name}")
+
+    def logout(self) -> None:
+        self._discard_shell()
+        self.auth_page.reset()
+        self.screens.setCurrentWidget(self.auth_page)
+        self.setWindowTitle(APP_TITLE)
+
+    def _discard_shell(self) -> None:
+        if self.shell is not None:
+            self.shell.sync_chip.stop()
+            self.screens.removeWidget(self.shell)
+            self.shell.deleteLater()
+            self.shell = None
 
     def closeEvent(self, event) -> None:  # noqa: N802 (Qt override signature)
         self.sync_scheduler.stop()
+        self.doctor_heartbeat.stop()
+        self._discard_shell()  # stops the workspace's timers before the DB closes
         self.broadcaster.close()
         self.conn.close()
         super().closeEvent(event)

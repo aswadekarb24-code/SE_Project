@@ -22,24 +22,36 @@ from pathlib import Path
 
 from sqlcipher3 import dbapi2 as sqlcipher
 
+from common.schema.app_meta import DDL as APP_META_DDL
 from common.schema.beds import DDL as BEDS_DDL
 from common.schema.departments import DDL as DEPARTMENTS_DDL
+from common.schema.doctor_schedules import DDL as DOCTOR_SCHEDULES_DDL
 from common.schema.doctors import DDL as DOCTORS_DDL
+from common.schema.medical_reports import DDL as MEDICAL_REPORTS_DDL
 from common.schema.patients import DDL as PATIENTS_DDL
+from common.schema.patients import NUMBER_INDEX_DDL as PATIENT_NUMBER_INDEX_DDL
 from common.schema.pharmacy_stock import DDL as PHARMACY_STOCK_DDL
 from common.schema.queue_tokens import DDL as QUEUE_TOKENS_DDL
 from common.schema.sync_audit_log import DDL as SYNC_AUDIT_LOG_DDL
+from common.schema.users import DDL as USERS_DDL
+from desktop.data.numbering import next_patient_number
+from desktop.data.repositories.patients_repo import PatientsRepository
 
 # Order matters: departments before doctors/queue_tokens (FK), patients
-# before queue_tokens (FK).
+# before queue_tokens (FK), doctors before users (FK), and everything a
+# report references before medical_reports.
 MIGRATIONS: list[str] = [
     SYNC_AUDIT_LOG_DDL,
+    APP_META_DDL,
     DEPARTMENTS_DDL,
     PATIENTS_DDL,
     QUEUE_TOKENS_DDL,
     DOCTORS_DDL,
     BEDS_DDL,
     PHARMACY_STOCK_DDL,
+    DOCTOR_SCHEDULES_DDL,
+    USERS_DDL,
+    MEDICAL_REPORTS_DDL,
 ]
 
 DEFAULT_DB_PATH = Path.home() / ".hms" / "hms.db"
@@ -75,6 +87,38 @@ def connect(
 
 
 def migrate(conn: sqlite3.Connection) -> None:
-    """Apply all known DDL. Idempotent (CREATE TABLE/INDEX IF NOT EXISTS)."""
+    """Apply all known DDL, then upgrade databases created by older
+    versions. Idempotent (CREATE TABLE/INDEX IF NOT EXISTS, and the upgrade
+    steps check before they change anything).
+    """
     for ddl in MIGRATIONS:
         conn.executescript(ddl)
+    _upgrade_patient_numbers(conn)
+
+
+def _upgrade_patient_numbers(conn: sqlite3.Connection) -> None:
+    """patient_number arrived after the patients table first shipped, and
+    CREATE TABLE IF NOT EXISTS never alters an existing table. Add the
+    column if it's missing, then give every patient registered before it
+    existed a number, oldest first, in one transaction.
+    """
+    columns = {row[1] for row in conn.execute("PRAGMA table_info(patients)")}
+    if "patient_number" not in columns:
+        conn.execute("ALTER TABLE patients ADD COLUMN patient_number TEXT")
+    conn.executescript(PATIENT_NUMBER_INDEX_DDL)
+
+    unnumbered = conn.execute(
+        "SELECT patient_id FROM patients WHERE patient_number IS NULL " "ORDER BY created_at, rowid"
+    ).fetchall()
+    if not unnumbered:
+        return
+
+    repo = PatientsRepository(conn)
+    conn.execute("BEGIN")
+    try:
+        for (patient_id,) in unnumbered:
+            repo.set_patient_number(patient_id, next_patient_number(conn))
+        conn.execute("COMMIT")
+    except Exception:
+        conn.execute("ROLLBACK")
+        raise

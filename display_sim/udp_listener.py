@@ -1,4 +1,4 @@
-"""Listens for TokenUpdatePayload broadcasts on BROADCAST_PORT. Runs in its
+"""Listens for token and doctor-status broadcasts on BROADCAST_PORT. Runs in its
 own thread so the display's UI event loop stays responsive. Malformed or
 corrupted packets are dropped (and listening continues) rather than crashing
 the process -- the behavior the SQA plan's "packet corruption checks" protocol
@@ -11,9 +11,9 @@ import socket
 import threading
 from collections.abc import Callable
 
-from common.broadcast_protocol import BROADCAST_PORT, PacketDecodeError, TokenUpdatePayload
+from common.broadcast_protocol import BROADCAST_PORT, Packet, PacketDecodeError, decode_packet
 
-OnUpdate = Callable[[TokenUpdatePayload], None]
+OnUpdate = Callable[[Packet], None]
 
 
 class UdpListener:
@@ -49,7 +49,7 @@ class UdpListener:
                 break
 
             try:
-                payload = TokenUpdatePayload.decode(data)
+                payload = decode_packet(data)
             except PacketDecodeError:
                 continue  # drop corrupted/malformed packets, keep listening
 

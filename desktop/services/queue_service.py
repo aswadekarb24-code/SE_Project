@@ -17,8 +17,10 @@ from uuid import uuid4
 from common.clock import today_iso
 from common.dto import PatientIntake, QueueTokenIssued, QueueTokenUpdate, TokenStatus
 from desktop.broadcast.broadcaster import Broadcaster, NullBroadcaster
+from desktop.data.numbering import next_patient_number
 from desktop.data.repositories.patients_repo import PatientsRepository
 from desktop.data.repositories.queue_tokens_repo import QueueTokensRepository
+from desktop.services.patient_service import validate_intake
 
 
 class InvalidTokenTransitionError(ValueError):
@@ -39,21 +41,30 @@ def issue_queue_token(
     patients_repo = PatientsRepository(conn)
     tokens_repo = QueueTokensRepository(conn)
 
+    is_new_patient = patient.patient_id is None or not patients_repo.exists(patient.patient_id)
+    if is_new_patient:
+        # Raises PatientValidationError before anything is written.
+        patient = validate_intake(patient)
+
     conn.execute("BEGIN")
     try:
         patient_id = patient.patient_id
         # A non-null but not-yet-persisted ID covers a client-generated UUID
         # built before submission (e.g. an offline-created draft); the design
         # doc's literal check is just `patient_id IS NULL`.
-        if patient_id is None or not patients_repo.exists(patient_id):
+        if is_new_patient:
             patient_id = patient_id or str(uuid4())
+            patient_number = next_patient_number(conn)
             patients_repo.insert(
                 patient_id=patient_id,
+                patient_number=patient_number,
                 full_name=patient.full_name,
                 dob=patient.dob,
                 gender=patient.gender,
                 contact_no=patient.contact_no,
             )
+        else:
+            patient_number = patients_repo.get(patient_id)["patient_number"]
 
         issued_date = today_iso()
         token_num = tokens_repo.next_token_num(department_id, issued_date)
@@ -85,6 +96,7 @@ def issue_queue_token(
         token_num=token_num,
         status=TokenStatus.WAITING,
         broadcast_status=broadcast_status,
+        patient_number=patient_number,
     )
 
 

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 import sqlite3
 
 from desktop.data.repositories.beds_repo import BedsRepository
@@ -13,8 +14,13 @@ _CYCLE = {
 }
 
 
+def _natural_key(label: str) -> list:
+    """Sort "Bed 2" before "Bed 10" (plain text order puts 10 first)."""
+    return [int(part) if part.isdigit() else part.lower() for part in re.split(r"(\d+)", label)]
+
+
 def list_beds(conn: sqlite3.Connection) -> list[dict]:
-    return BedsRepository(conn).list_all()
+    return sorted(BedsRepository(conn).list_all(), key=lambda bed: _natural_key(bed["label"]))
 
 
 def toggle_bed(conn: sqlite3.Connection, bed_id: str) -> dict:

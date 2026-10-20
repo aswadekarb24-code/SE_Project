@@ -46,9 +46,13 @@ uv sync --extra dev --extra gateway
 uv run python -m desktop.main
 ```
 
-A role-selection dialog appears first (Receptionist/Doctor); the local
-database is created (and encrypted — see `desktop/data/db.py`) at
-`%USERPROFILE%\.hms\hms.db` on first launch.
+The sign-in screen appears first. On a fresh install it opens on
+**Create account**: make a Receptionist or Doctor account (doctors also pick
+their department), and you're signed straight in. The local database is
+created (and encrypted — see `desktop/data/db.py`) at
+`%USERPROFILE%\.hms\hms.db` on first launch. An existing database from an
+earlier version is upgraded in place: new tables are added and every
+existing patient is given a patient number.
 
 ### 1.4 Run the tests
 
@@ -85,9 +89,10 @@ by `.gitignore`, alongside (not overwriting) the committed `.spec`/`.iss`
 files already in `build\`.
 
 **Smoke test the build**: run `dist\HMS\HMS.exe` (or `dist\HMS.exe` for the
-release build) directly. Confirm the role-selection dialog appears, issue a
-token on the Reception screen, and confirm `%USERPROFILE%\.hms\hms.db` was
-created. (This exact flow was verified on Linux during Cycle 5 — see
+release build) directly. Confirm the sign-in screen appears, create a
+receptionist account, issue a token on the Check-in screen and print its
+slip, log out, create a doctor account, call the patient, save a report and
+export it as PDF, and confirm `%USERPROFILE%\.hms\hms.db` was created. (This exact flow was verified on Linux during Cycle 5 — see
 `docs/progress/cycle-5.md` — producing a working native binary and a
 correctly SQLCipher-encrypted DB; only the Windows-specific `.exe` artifact
 itself still needs this same check run on Windows.)
@@ -116,7 +121,7 @@ sign-off criteria:
       `docs/SE_Group_3_Lab_5_241080077.pdf`)
 - [ ] `HMS-Setup-0.1.0.exe` installs cleanly on a **clean Windows VM** with
       no Python/uv/Docker preinstalled
-- [ ] The installed app launches, a role can be selected, and
+- [ ] The installed app launches, an account can be created and signed in to, and
       `%USERPROFILE%\.hms\hms.db` is created and encrypted on first use
 - [ ] Uninstalling via Windows "Apps & Features" removes the app files
       (the `.hms` data directory is intentionally left behind — it's user
