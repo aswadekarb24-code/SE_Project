@@ -95,8 +95,8 @@ move the sync layer from local dev to production (see `SyncProvider` in
 `common/sync_provider.py`).
 
 By default the desktop app stays fully offline (`NoOpSyncProvider`). Set
-`HMS_GATEWAY_URL` (e.g. `http://localhost:8000`, with the Compose stack up)
-to enable the real background sync worker, which pushes pending changes
+`HMS_GATEWAY_URL` (e.g. `http://localhost:8000`) in the shell or in `.env`,
+which the app reads, to enable the real background sync worker, which pushes pending changes
 once shortly after launch and then every `HMS_SYNC_INTERVAL_SECONDS`
 (default 3600, i.e. hourly; the status bar's Retry syncs immediately), and
 resolves conflicts via Last-Write-Wins (see `desktop/sync/`).

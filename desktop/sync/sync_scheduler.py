@@ -58,7 +58,12 @@ class SyncScheduler(QObject):
         self.last_attempt_at = now_iso()
         try:
             self.last_results = list(asyncio.run(self._worker.run_once()) or [])
-            self.last_error = None
+            # Records the provider couldn't upload come back PENDING with an
+            # error; surface the first one so the status bar shows the
+            # failure instead of a quiet "N pending".
+            self.last_error = next(
+                (f"Upload failed: {r.error}" for r in self.last_results if r.error), None
+            )
         except Exception as error:  # noqa: BLE001 -- see module docstring
             self.last_results = []
             self.last_error = f"{type(error).__name__}: {error}"

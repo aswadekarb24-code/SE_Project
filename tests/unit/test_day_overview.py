@@ -175,3 +175,47 @@ def test_main_window_schedules_hourly_sync_and_a_startup_pass(qapp, tmp_path, fr
     finally:
         window.close()
     assert not window.startup_sync.isActive()
+
+
+def test_dotenv_supplies_only_sync_settings(tmp_path, monkeypatch):
+    from desktop import config
+
+    env_file = tmp_path / ".env"
+    env_file.write_text(
+        "# comment\n"
+        "DATABASE_URL=postgresql://secret@host/db\n"
+        'HMS_GATEWAY_URL="http://gateway:8000"\n'
+        "HMS_DB_ENCRYPTION_KEY=not-for-the-desktop\n"
+        "HMS_SYNC_INTERVAL_SECONDS=600\n",
+        encoding="utf-8",
+    )
+    for key in ("HMS_GATEWAY_URL", "HMS_SYNC_INTERVAL_SECONDS", "HMS_DB_ENCRYPTION_KEY"):
+        monkeypatch.delenv(key, raising=False)
+    monkeypatch.delenv("DATABASE_URL", raising=False)
+    monkeypatch.setenv("HMS_LOAD_DOTENV", "1")
+
+    config.load_dotenv(tmp_path / "missing.env", env_file)
+
+    import os
+
+    assert os.environ["HMS_GATEWAY_URL"] == "http://gateway:8000"
+    assert os.environ["HMS_SYNC_INTERVAL_SECONDS"] == "600"
+    assert "DATABASE_URL" not in os.environ
+    assert "HMS_DB_ENCRYPTION_KEY" not in os.environ
+    for key in ("HMS_GATEWAY_URL", "HMS_SYNC_INTERVAL_SECONDS"):
+        monkeypatch.delenv(key)
+
+
+def test_dotenv_never_overrides_real_environment(tmp_path, monkeypatch):
+    from desktop import config
+
+    env_file = tmp_path / ".env"
+    env_file.write_text("HMS_GATEWAY_URL=http://from-file\n", encoding="utf-8")
+    monkeypatch.setenv("HMS_LOAD_DOTENV", "1")
+    monkeypatch.setenv("HMS_GATEWAY_URL", "http://from-shell")
+
+    config.load_dotenv(env_file)
+
+    import os
+
+    assert os.environ["HMS_GATEWAY_URL"] == "http://from-shell"

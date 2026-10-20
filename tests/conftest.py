@@ -2,6 +2,9 @@ import os
 
 # Run Qt headless in tests/CI -- no X server required.
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
+# Never pick up a developer's .env: tests must not sync to a real gateway.
+os.environ["HMS_LOAD_DOTENV"] = "0"
+os.environ.pop("HMS_GATEWAY_URL", None)
 
 import pytest  # noqa: E402 (must follow the QT_QPA_PLATFORM env var above)
 from PyQt6.QtWidgets import QApplication  # noqa: E402

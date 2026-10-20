@@ -111,6 +111,16 @@ a requirement.
   birth and follow-up date can be typed or picked from a calendar popup
   (button in the field, or Alt+Down). The popup only offers dates the
   field accepts: no future birth dates, no past follow-ups.
+- **First real Supabase sync** (gateway run with `uvicorn --env-file .env`,
+  no Docker). Pushing a real 126-change backlog exposed three gateway/
+  client defects, all fixed with tests: the same record twice in one
+  batch hit a duplicate-key error; one database round trip per record
+  made pushes outlast the client's 5 s timeout (now one query per
+  batch, 100-record chunks, 30 s push timeout); and re-sending after
+  such a timeout was reported as conflicts (an exact replay is now
+  simply synced). Upload failures now show in the status bar. The
+  desktop app also reads `HMS_GATEWAY_URL` / `HMS_SYNC_INTERVAL_SECONDS`
+  from `.env` (never `DATABASE_URL` or the encryption key).
 - **Hourly cloud sync**: the default interval was 30 seconds; it is now
   3600 (`HMS_SYNC_INTERVAL_SECONDS` still overrides it). A first pass runs
   5 seconds after launch so sessions shorter than an hour still upload,
