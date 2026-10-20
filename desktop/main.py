@@ -20,7 +20,7 @@ from PyQt6.QtWidgets import QApplication, QMainWindow, QStackedWidget
 
 from common.sync_provider import NoOpSyncProvider
 from desktop.broadcast.udp_broadcaster import UdpBroadcaster
-from desktop.config import GATEWAY_URL, SYNC_INTERVAL_SECONDS
+from desktop.config import GATEWAY_URL, STARTUP_SYNC_DELAY_SECONDS, SYNC_INTERVAL_SECONDS
 from desktop.data.db import connect, migrate
 from desktop.data.seed import seed_default_data
 from desktop.services.auth_service import AuthenticatedUser
@@ -59,6 +59,11 @@ class MainWindow(QMainWindow):
             self.sync_worker, interval_seconds=SYNC_INTERVAL_SECONDS
         )
         self.sync_scheduler.start()
+        self.startup_sync = QTimer(self)
+        self.startup_sync.setSingleShot(True)
+        self.startup_sync.setInterval(int(STARTUP_SYNC_DELAY_SECONDS * 1000))
+        self.startup_sync.timeout.connect(self.sync_scheduler.sync_now)
+        self.startup_sync.start()
 
         self.doctor_heartbeat = QTimer(self)
         self.doctor_heartbeat.setInterval(DOCTOR_HEARTBEAT_MS)
@@ -110,6 +115,7 @@ class MainWindow(QMainWindow):
 
     def closeEvent(self, event) -> None:  # noqa: N802 (Qt override signature)
         self.sync_scheduler.stop()
+        self.startup_sync.stop()
         self.doctor_heartbeat.stop()
         self._discard_shell()  # stops the workspace's timers before the DB closes
         self.broadcaster.close()

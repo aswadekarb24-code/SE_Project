@@ -30,6 +30,7 @@ from desktop.sync.sync_scheduler import SyncScheduler
 from desktop.sync.sync_status import sync_snapshot
 from desktop.ui import icons
 from desktop.ui.components import Avatar, button, label, repolish
+from desktop.ui.day_overview import DayOverviewDialog
 from desktop.ui.pages.base import Page
 from desktop.ui.pages.check_in_page import CheckInPage
 from desktop.ui.pages.doctor_console import DoctorConsole
@@ -155,6 +156,7 @@ class AppShell(QFrame):
         super().__init__()
         self.setObjectName("shell")
         self.user = user
+        self._conn = conn
         self.sync_chip = SyncChip(conn, sync_scheduler, gateway_url)
         self.pages: dict[str, Page] = {}
         self.nav_buttons: dict[str, QToolButton] = {}
@@ -232,10 +234,13 @@ class AppShell(QFrame):
         titles.addWidget(self.subtitle_label)
         header.addLayout(titles, 1)
 
-        today = local_today()
-        date_chip = label(f"{today:%a}, {today.day} {today:%b %Y}", "dateChip")
-        date_chip.setFixedHeight(38)
-        header.addWidget(date_chip, 0, Qt.AlignmentFlag.AlignVCenter)
+        self.date_button = button("", "secondary", "calendar-check")
+        self.date_button.setObjectName("dateChip")
+        self.date_button.setFixedHeight(38)
+        self.date_button.setToolTip("Open the calendar: patients and reports by day")
+        self.date_button.clicked.connect(self.open_calendar)
+        self._update_date()
+        header.addWidget(self.date_button, 0, Qt.AlignmentFlag.AlignVCenter)
         header.addWidget(self.sync_chip, 0, Qt.AlignmentFlag.AlignVCenter)
 
         chip = QFrame()
@@ -268,9 +273,20 @@ class AppShell(QFrame):
         page = self.pages[key]
         self.stack.setCurrentWidget(page)
         self.nav_buttons[key].setChecked(True)
+        self._update_date()  # stays right if the app is left open past midnight
         self.title_label.setText(page.title)
         self.subtitle_label.setText(page.subtitle)
         page.refresh()
+
+    def _update_date(self) -> None:
+        today = local_today()
+        self.date_button.setText(f"{today:%a}, {today.day} {today:%b %Y}")
+
+    def open_calendar(self) -> None:
+        """The date chip's calendar: browse any day's patients and reports."""
+        dialog = DayOverviewDialog(self._conn, self.user, self)
+        dialog.open_patient.connect(lambda patient_id: self.open("patients", patient_id))
+        dialog.exec()
 
     def new_patient(self) -> None:
         """Ctrl+N: jump to check-in with the cursor in the full-name field."""

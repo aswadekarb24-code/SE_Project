@@ -273,7 +273,7 @@ environment variables (export them yourself, or use a tool like
 |---|---|---|
 | `DATABASE_URL` | Postgres connection string the gateway uses | local docker-compose Postgres (port 5433 on the host) |
 | `HMS_GATEWAY_URL` | Desktop app's sync target; unset = fully offline (`NoOpSyncProvider`) | unset |
-| `HMS_SYNC_INTERVAL_SECONDS` | Background sync poll interval | `30` |
+| `HMS_SYNC_INTERVAL_SECONDS` | Background sync interval (also runs once at launch) | `3600` (hourly) |
 | `HMS_DB_ENCRYPTION_KEY` | SQLCipher key for the local DB — **set a real secret for any non-dev deployment** | fixed, publicly-known dev-only fallback |
 | `HMS_REQUIRE_TLS` | Gateway refuses plain HTTP when `true` (needs a TLS-terminating reverse proxy in front) | `false` |
 

@@ -98,6 +98,21 @@ doesn't have; it stays a carried-over item (see below and Cycle 4).
 Archiving old logs is listed in Lab 1A as an anticipated limitation, not
 a requirement.
 
+## Follow-up requests
+
+- **Calendar on the date chip** (`desktop/ui/day_overview.py`,
+  `desktop/services/day_service.py`): pick a day to see its visits, new
+  registrations and, for doctors, reports; busy days are bold in the
+  calendar; double-click opens the patient or report. Days are local
+  midnight-to-midnight, converted to UTC ranges, because timestamps are
+  stored in UTC (matching on the UTC date would file a 1:00 AM IST
+  check-in under the previous day).
+- **Hourly cloud sync**: the default interval was 30 seconds; it is now
+  3600 (`HMS_SYNC_INTERVAL_SECONDS` still overrides it). A first pass runs
+  5 seconds after launch so sessions shorter than an hour still upload,
+  and the status bar's Retry syncs on demand. Changes waiting for the next
+  pass are queued in `sync_audit_log`, so nothing is lost in between.
+
 ## Defects found and fixed during the cycle
 
 - Ordering ties: two records written in the same microsecond sorted by

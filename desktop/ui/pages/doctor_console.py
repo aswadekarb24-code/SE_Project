@@ -147,9 +147,9 @@ class DoctorConsole(Page):
         self.queue_table = table(["Token", "Patient", "Status"], row_height=56)
         header = self.queue_table.horizontalHeader()
         header.setSectionResizeMode(0, QHeaderView.ResizeMode.Fixed)
-        self.queue_table.setColumnWidth(0, 72)
+        self.queue_table.setColumnWidth(0, 60)
         header.setSectionResizeMode(2, QHeaderView.ResizeMode.Fixed)
-        self.queue_table.setColumnWidth(2, 140)
+        self.queue_table.setColumnWidth(2, 130)
         self.queue_stack = QStackedWidget()
         self.queue_stack.addWidget(self.queue_table)
         self.queue_stack.addWidget(

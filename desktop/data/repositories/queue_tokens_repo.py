@@ -93,6 +93,42 @@ class QueueTokensRepository:
             for r in rows
         ]
 
+    def list_created_between(self, start: str, end: str) -> list[dict]:
+        """Tokens issued in [start, end) (UTC ISO timestamps), with patient and
+        department details, in the order they were issued.
+        """
+        rows = self._conn.execute(
+            """SELECT t.token_id, t.token_num, t.status, t.dept_id, d.name,
+                      p.patient_id, p.patient_number, p.full_name, t.created_at
+               FROM queue_tokens t
+               JOIN patients p ON p.patient_id = t.patient_id
+               JOIN departments d ON d.dept_id = t.dept_id
+               WHERE t.created_at >= ? AND t.created_at < ?
+               ORDER BY t.created_at, t.rowid""",
+            (start, end),
+        ).fetchall()
+        return [
+            {
+                "token_id": r[0],
+                "token_num": r[1],
+                "status": r[2],
+                "dept_id": r[3],
+                "dept_name": r[4],
+                "patient_id": r[5],
+                "patient_number": r[6],
+                "full_name": r[7],
+                "created_at": r[8],
+            }
+            for r in rows
+        ]
+
+    def created_timestamps_between(self, start: str, end: str) -> list[str]:
+        rows = self._conn.execute(
+            "SELECT created_at FROM queue_tokens WHERE created_at >= ? AND created_at < ?",
+            (start, end),
+        ).fetchall()
+        return [row[0] for row in rows]
+
     def list_for_patient(self, patient_id: str) -> list[dict]:
         """A patient's visits (one per token), newest first."""
         rows = self._conn.execute(

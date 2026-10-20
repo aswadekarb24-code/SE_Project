@@ -55,6 +55,32 @@ class MedicalReportsRepository:
         ).fetchall()
         return [dict(zip(FIELDS, row, strict=True)) for row in rows]
 
+    def list_created_between(self, start: str, end: str) -> list[dict]:
+        """Reports saved in [start, end) (UTC ISO timestamps), oldest first,
+        each with the patient's name and number added.
+        """
+        rows = self._conn.execute(
+            f"""SELECT {", ".join("r." + field for field in FIELDS)},
+                       p.full_name, p.patient_number
+                FROM medical_reports r JOIN patients p ON p.patient_id = r.patient_id
+                WHERE r.created_at >= ? AND r.created_at < ?
+                ORDER BY r.created_at, r.rowid""",
+            (start, end),
+        ).fetchall()
+        reports = []
+        for row in rows:
+            report = dict(zip(FIELDS, row[: len(FIELDS)], strict=True))
+            report["full_name"], report["patient_number"] = row[len(FIELDS) :]
+            reports.append(report)
+        return reports
+
+    def created_timestamps_between(self, start: str, end: str) -> list[str]:
+        rows = self._conn.execute(
+            "SELECT created_at FROM medical_reports WHERE created_at >= ? AND created_at < ?",
+            (start, end),
+        ).fetchall()
+        return [row[0] for row in rows]
+
     def count_by_doctor_on(self, doctor_id: str, iso_date: str) -> int:
         return self._conn.execute(
             """SELECT COUNT(*) FROM medical_reports

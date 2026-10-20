@@ -25,6 +25,8 @@ waiting-room queues, and background sync to a cloud Postgres backend
   who's available and who's in OPD today on the Doctors page.
 - **Token slips:** print a slip for the patient after check-in (Ctrl+P), or
   turn on automatic printing to the default printer.
+- **Calendar:** click the date in the header to pick any day and see its
+  visits, new patients and (for doctors) reports; double-click to open one.
 - **Sync status bar:** blue when synced, orange when working from the
   offline cache, red on a conflict or failed pass; hover for details,
   click to retry.
@@ -95,8 +97,9 @@ move the sync layer from local dev to production (see `SyncProvider` in
 By default the desktop app stays fully offline (`NoOpSyncProvider`). Set
 `HMS_GATEWAY_URL` (e.g. `http://localhost:8000`, with the Compose stack up)
 to enable the real background sync worker, which pushes pending changes
-every `HMS_SYNC_INTERVAL_SECONDS` (default 30) and resolves conflicts via
-Last-Write-Wins (see `desktop/sync/`).
+once shortly after launch and then every `HMS_SYNC_INTERVAL_SECONDS`
+(default 3600, i.e. hourly; the status bar's Retry syncs immediately), and
+resolves conflicts via Last-Write-Wins (see `desktop/sync/`).
 
 The local SQLite DB is encrypted at rest via SQLCipher (NFR-02). Set
 `HMS_DB_ENCRYPTION_KEY` to a real secret for any non-dev deployment — if

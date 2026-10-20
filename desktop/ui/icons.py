@@ -44,6 +44,8 @@ _PATHS = {
     "check": '<path d="M5 12.5l4.5 4.5L19 7.5"/>',
     "shield": '<path d="M12 3l8 3v6c0 5-3.5 8.5-8 9-4.5-.5-8-4-8-9V6z"/><path d="M9 12l2 2 4-4"/>',
     "arrow-right": '<path d="M5 12h14M13 6l6 6-6 6"/>',
+    "chevron-left": '<path d="M15 6l-6 6 6 6"/>',
+    "chevron-right": '<path d="M9 6l6 6-6 6"/>',
     "refresh": '<path d="M20 11a8 8 0 0 0-14.9-3.5M4 4v4h4"/>'
     '<path d="M4 13a8 8 0 0 0 14.9 3.5M20 20v-4h-4"/>',
     "printer": '<path d="M6 9V3h12v6"/><rect x="3" y="9" width="18" height="8" rx="2"/>'

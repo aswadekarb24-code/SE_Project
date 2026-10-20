@@ -67,12 +67,53 @@ QToolButton#navButton:checked { background: $PRIMARY_TINT; }
 /* Header ---------------------------------------------------------------- */
 QLabel#pageTitle { font-size: 30px; font-weight: 600; letter-spacing: -0.6px; }
 QLabel#pageSubtitle { font-size: 14px; color: $TEXT_SECONDARY; }
-QLabel#dateChip {
+QPushButton#dateChip {
     background: $SURFACE;
     border: 1px solid $BORDER_STRONG;
     border-radius: 19px;
+    min-height: 36px;
     padding: 0 16px;
     font-weight: 500;
+}
+QPushButton#dateChip:hover { background: $PRIMARY_TINT; border-color: #CFE3FD; }
+
+/* Day-overview calendar --------------------------------------------------- */
+QCalendarWidget QWidget#qt_calendar_navigationbar {
+    background: $SURFACE;
+    border-bottom: 1px solid $DIVIDER;
+    min-height: 40px;
+}
+QCalendarWidget QToolButton {
+    background: transparent;
+    border: none;
+    border-radius: 8px;
+    color: $TEXT_PRIMARY;
+    font-weight: 600;
+    padding: 4px 8px;
+}
+QCalendarWidget QToolButton:hover { background: $HOVER; }
+QCalendarWidget QToolButton::menu-indicator { image: none; width: 0; }
+QCalendarWidget QSpinBox {
+    border: 1px solid $BORDER_STRONG;
+    border-radius: 6px;
+    padding: 2px 6px;
+    selection-background-color: $PRIMARY_TINT;
+    selection-color: $TEXT_PRIMARY;
+}
+QCalendarWidget QMenu { background: $SURFACE; border: 1px solid $BORDER; }
+QCalendarWidget QMenu::item { padding: 6px 18px; }
+QCalendarWidget QMenu::item:selected { background: $PRIMARY_TINT; color: $PRIMARY; }
+QCalendarWidget QAbstractItemView {
+    background: $SURFACE;
+    color: $TEXT_PRIMARY;
+    outline: 0;
+    selection-background-color: $PRIMARY;
+    selection-color: $TEXT_ON_ACCENT;
+}
+QCalendarWidget QAbstractItemView:disabled { color: $TEXT_DISABLED; }
+QCalendarWidget#dayCalendar {
+    border: 1px solid $BORDER;
+    border-radius: 12px;
 }
 QFrame#userChip {
     background: $SURFACE;

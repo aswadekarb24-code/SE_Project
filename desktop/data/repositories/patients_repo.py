@@ -69,6 +69,16 @@ class PatientsRepository:
         ).fetchall()
         return [_to_dict(row) for row in rows]
 
+    def list_created_between(self, start: str, end: str) -> list[dict]:
+        """Patients registered in [start, end) (UTC ISO timestamps), oldest first."""
+        rows = self._conn.execute(
+            f"""SELECT {_COLUMNS} FROM patients
+                WHERE created_at >= ? AND created_at < ?
+                ORDER BY created_at, rowid""",
+            (start, end),
+        ).fetchall()
+        return [_to_dict(row) for row in rows]
+
     def count(self) -> int:
         return self._conn.execute("SELECT COUNT(*) FROM patients").fetchone()[0]
 
