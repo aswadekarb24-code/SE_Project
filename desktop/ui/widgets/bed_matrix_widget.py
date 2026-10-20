@@ -4,14 +4,17 @@ from __future__ import annotations
 
 import sqlite3
 
+from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import QGridLayout, QPushButton, QWidget
 
+from common import design_tokens as tokens
 from desktop.services.bed_service import list_beds, toggle_bed
 
+# (text, tint, border) per status -- soft tinted tiles, like status badges.
 _COLORS = {
-    "AVAILABLE": "#2e7d32",
-    "OCCUPIED": "#c62828",
-    "MAINTENANCE": "#f9a825",
+    "AVAILABLE": (tokens.SUCCESS, tokens.SUCCESS_TINT, tokens.SUCCESS_BORDER),
+    "OCCUPIED": (tokens.DANGER, tokens.DANGER_TINT, tokens.DANGER_BORDER),
+    "MAINTENANCE": (tokens.WARNING, tokens.WARNING_TINT, tokens.WARNING_BORDER),
 }
 _COLUMNS = 5
 
@@ -21,6 +24,8 @@ class BedMatrixWidget(QWidget):
         super().__init__(parent)
         self._conn = conn
         self._layout = QGridLayout(self)
+        self._layout.setSpacing(12)
+        self._layout.setAlignment(Qt.AlignmentFlag.AlignTop)
         self._buttons: dict[str, QPushButton] = {}
         self.refresh()
 
@@ -37,7 +42,12 @@ class BedMatrixWidget(QWidget):
 
     def _style_button(self, button: QPushButton, bed: dict) -> None:
         button.setText(f"{bed['label']}\n{bed['status']}")
-        button.setStyleSheet(f"background-color: {_COLORS[bed['status']]}; color: white;")
+        text, tint, border = _COLORS[bed["status"]]
+        button.setStyleSheet(
+            f"QPushButton {{ background: {tint}; color: {text}; border: 1px solid {border};"
+            f" border-radius: {tokens.RADIUS_TILE}px; min-height: 72px; font-weight: 500; }}"
+            f" QPushButton:hover {{ border-color: {text}; }}"
+        )
 
     def _on_toggle(self, bed_id: str) -> None:
         toggle_bed(self._conn, bed_id)

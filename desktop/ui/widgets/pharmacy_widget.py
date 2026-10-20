@@ -5,6 +5,7 @@ from __future__ import annotations
 import sqlite3
 
 from PyQt6.QtCore import Qt
+from PyQt6.QtGui import QColor
 from PyQt6.QtWidgets import (
     QHBoxLayout,
     QLineEdit,
@@ -15,6 +16,7 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
+from common import design_tokens as tokens
 from desktop.services.pharmacy_service import adjust_stock, search_stock
 
 
@@ -38,10 +40,12 @@ class PharmacyWidget(QWidget):
         self.decrease_button.setEnabled(False)
 
         buttons_row = QHBoxLayout()
+        buttons_row.setAlignment(Qt.AlignmentFlag.AlignLeft)
         buttons_row.addWidget(self.decrease_button)
         buttons_row.addWidget(self.increase_button)
 
         layout = QVBoxLayout(self)
+        layout.setSpacing(12)
         layout.addWidget(self.search_input)
         layout.addWidget(self.list_widget)
         layout.addLayout(buttons_row)
@@ -55,6 +59,8 @@ class PharmacyWidget(QWidget):
             if item["low_stock"]:
                 label += "  [LOW STOCK]"
             list_item = QListWidgetItem(label)
+            if item["low_stock"]:
+                list_item.setForeground(QColor(tokens.DANGER))
             list_item.setData(Qt.ItemDataRole.UserRole, item["item_id"])
             self.list_widget.addItem(list_item)
         self.increase_button.setEnabled(False)

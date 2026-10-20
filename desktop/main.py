@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import sys
 
+from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import QApplication, QMainWindow, QTabWidget
 
 from common.sync_provider import NoOpSyncProvider
@@ -27,6 +28,7 @@ from desktop.sync.sync_worker import SyncWorker
 from desktop.ui.doctor_window import DoctorWindow
 from desktop.ui.reception_window import ReceptionWindow
 from desktop.ui.role_select_dialog import RoleSelectDialog
+from desktop.ui.theme import apply_theme, style_combo_popups
 from desktop.ui.widgets.bed_matrix_widget import BedMatrixWidget
 from desktop.ui.widgets.doctor_availability_widget import DoctorAvailabilityWidget
 from desktop.ui.widgets.pharmacy_widget import PharmacyWidget
@@ -36,7 +38,9 @@ class MainWindow(QMainWindow):
     def __init__(self, db_path=None, role: Role | None = None) -> None:
         super().__init__()
         self.setWindowTitle("Hybrid Offline-First HMS")
-        self.resize(480, 320)
+        self.resize(1120, 720)
+        # Visual only: a strip of canvas around the rounded app shell.
+        self.setContentsMargins(16, 16, 16, 16)
 
         self.conn = connect(db_path) if db_path else connect()
         migrate(self.conn)
@@ -52,6 +56,7 @@ class MainWindow(QMainWindow):
 
         self.role = role if role is not None else self._prompt_for_role()
         self.setCentralWidget(self._build_tabs_for_role(self.role))
+        style_combo_popups(self)
 
     def _prompt_for_role(self) -> Role:
         dialog = RoleSelectDialog(self)
@@ -60,6 +65,8 @@ class MainWindow(QMainWindow):
 
     def _build_tabs_for_role(self, role: Role) -> QTabWidget:
         tabs = QTabWidget()
+        # Lets the stylesheet paint the rounded shell behind tabs + pane.
+        tabs.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
         if role == Role.RECEPTIONIST:
             tabs.addTab(ReceptionWindow(self.conn, broadcaster=self.broadcaster), "Reception")
             tabs.addTab(BedMatrixWidget(self.conn), "Beds")
@@ -78,6 +85,7 @@ class MainWindow(QMainWindow):
 
 def main() -> int:
     app = QApplication(sys.argv)
+    apply_theme(app)
     window = MainWindow()
     window.show()
     return app.exec()

@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import sqlite3
 
+from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import QComboBox, QLabel, QPushButton, QVBoxLayout, QWidget
 
 from desktop.broadcast.broadcaster import Broadcaster
@@ -31,14 +32,18 @@ class DoctorWindow(QWidget):
             self.department_select.addItem(name, dept_id)
 
         self.call_next_button = QPushButton("Call Next")
+        self.call_next_button.setProperty("variant", "primary")
         self.call_next_button.clicked.connect(self._on_call_next)
         self.complete_button = QPushButton("Complete Consultation")
         self.complete_button.clicked.connect(self._on_complete)
         self.complete_button.setEnabled(False)
 
         self.status_label = QLabel("No patient called")
+        self.status_label.setObjectName("statusLabel")
 
         layout = QVBoxLayout(self)
+        layout.setSpacing(12)
+        layout.setAlignment(Qt.AlignmentFlag.AlignTop)
         layout.addWidget(self.department_select)
         layout.addWidget(self.call_next_button)
         layout.addWidget(self.complete_button)

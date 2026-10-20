@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import sqlite3
 
+from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import QComboBox, QHBoxLayout, QLabel, QVBoxLayout, QWidget
 
 from desktop.services.doctor_service import STATUSES, list_doctors, set_doctor_status
@@ -14,6 +15,8 @@ class DoctorAvailabilityWidget(QWidget):
         super().__init__(parent)
         self._conn = conn
         self._layout = QVBoxLayout(self)
+        self._layout.setSpacing(12)
+        self._layout.setAlignment(Qt.AlignmentFlag.AlignTop)
         self._combos: dict[str, QComboBox] = {}
         self.refresh()
 

@@ -22,7 +22,9 @@ a = Analysis(  # noqa: F821
     [str(PROJECT_ROOT / "desktop" / "main.py")],
     pathex=[str(PROJECT_ROOT)],
     binaries=[],
-    datas=[],
+    # Stylesheet icons (e.g. the dropdown chevron), loaded at runtime by
+    # desktop/ui/theme.py from desktop/ui/assets next to the module.
+    datas=[(str(PROJECT_ROOT / "desktop" / "ui" / "assets"), "desktop/ui/assets")],
     hiddenimports=["sqlcipher3", "sqlcipher3.dbapi2"],
     hookspath=[],
     excludes=[

@@ -16,6 +16,8 @@ class RoleSelectDialog(QDialog):
         self.selected_role: Role | None = None
 
         layout = QVBoxLayout(self)
+        layout.setContentsMargins(28, 28, 28, 28)
+        layout.setSpacing(12)
         layout.addWidget(QLabel("Who is signing in?"))
 
         receptionist_button = QPushButton("Receptionist")

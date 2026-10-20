@@ -7,6 +7,7 @@ from __future__ import annotations
 import re
 import sqlite3
 
+from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import (
     QComboBox,
     QFormLayout,
@@ -47,10 +48,14 @@ class ReceptionWindow(QWidget):
             self.department_select.addItem(name, dept_id)
 
         self.issue_button = QPushButton("Issue Token")
+        self.issue_button.setProperty("variant", "primary")
         self.issue_button.clicked.connect(self._on_issue_token)
         self.status_label = QLabel("")
+        self.status_label.setObjectName("statusLabel")
 
         form = QFormLayout()
+        form.setHorizontalSpacing(16)
+        form.setVerticalSpacing(12)
         form.addRow("Full name*", self.full_name_input)
         form.addRow("Date of birth* (YYYY-MM-DD)", self.dob_input)
         form.addRow("Gender", self.gender_input)
@@ -58,6 +63,8 @@ class ReceptionWindow(QWidget):
         form.addRow("Department", self.department_select)
 
         layout = QVBoxLayout(self)
+        layout.setSpacing(16)
+        layout.setAlignment(Qt.AlignmentFlag.AlignTop)
         layout.addLayout(form)
         layout.addWidget(self.issue_button)
         layout.addWidget(self.status_label)
