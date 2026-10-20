@@ -111,6 +111,7 @@ QCalendarWidget QAbstractItemView {
     selection-color: $TEXT_ON_ACCENT;
 }
 QCalendarWidget QAbstractItemView:disabled { color: $TEXT_DISABLED; }
+QFrame#calendarPopup { background: $SURFACE; border: 1px solid $BORDER_STRONG; }
 QCalendarWidget#dayCalendar {
     border: 1px solid $BORDER;
     border-radius: 12px;

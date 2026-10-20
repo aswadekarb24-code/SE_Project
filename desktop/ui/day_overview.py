@@ -9,16 +9,14 @@ from __future__ import annotations
 import sqlite3
 from datetime import date
 
-from PyQt6.QtCore import QDate, QSize, Qt, pyqtSignal
+from PyQt6.QtCore import QDate, Qt, pyqtSignal
 from PyQt6.QtGui import QColor, QFont, QTextCharFormat
 from PyQt6.QtWidgets import (
-    QCalendarWidget,
     QDialog,
     QHBoxLayout,
     QHeaderView,
     QStackedWidget,
     QTableWidget,
-    QToolButton,
     QVBoxLayout,
     QWidget,
 )
@@ -28,7 +26,6 @@ from common.clock import local_today
 from desktop.services.auth_service import AuthenticatedUser, Role
 from desktop.services.day_service import active_days, day_overview, local_time
 from desktop.services.patient_service import age_sex, get_patient
-from desktop.ui import icons
 from desktop.ui.components import (
     Badge,
     Segmented,
@@ -40,11 +37,8 @@ from desktop.ui.components import (
     table,
     table_item,
 )
+from desktop.ui.date_field import styled_calendar, to_date
 from desktop.ui.report_dialogs import ReportViewerDialog
-
-
-def _to_date(value: QDate) -> date:
-    return date(value.year(), value.month(), value.day())
 
 
 def _fixed(table_widget: QTableWidget, widths: dict[int, int]) -> None:
@@ -83,31 +77,10 @@ class DayOverviewDialog(QDialog):
         left = QVBoxLayout()
         left.setSpacing(12)
         left.addWidget(label("Pick a day", "dialogTitle"))
-        self.calendar = QCalendarWidget()
-        self.calendar.setObjectName("dayCalendar")
-        self.calendar.setGridVisible(False)
-        self.calendar.setVerticalHeaderFormat(QCalendarWidget.VerticalHeaderFormat.NoVerticalHeader)
-        self.calendar.setHorizontalHeaderFormat(
-            QCalendarWidget.HorizontalHeaderFormat.ShortDayNames
-        )
-        self.calendar.setFirstDayOfWeek(Qt.DayOfWeek.Monday)
         today = local_today()
-        self.calendar.setMaximumDate(QDate(today.year, today.month, today.day))
+        self.calendar = styled_calendar(maximum=today)
+        self.calendar.setObjectName("dayCalendar")
         self.calendar.setFixedSize(330, 290)
-        # Month arrows as theme icons (Fusion's default arrows vanish under the stylesheet).
-        for name, icon_name in (
-            ("qt_calendar_prevmonth", "chevron-left"),
-            ("qt_calendar_nextmonth", "chevron-right"),
-        ):
-            arrow = self.calendar.findChild(QToolButton, name)
-            if arrow is not None:
-                arrow.setIcon(icons.icon(icon_name, tokens.TEXT_PRIMARY, size=18))
-                arrow.setIconSize(QSize(18, 18))
-        # Weekends in the normal text colour instead of Qt's default red.
-        plain = QTextCharFormat()
-        plain.setForeground(QColor(tokens.TEXT_PRIMARY))
-        for weekend in (Qt.DayOfWeek.Saturday, Qt.DayOfWeek.Sunday):
-            self.calendar.setWeekdayTextFormat(weekend, plain)
         left.addWidget(self.calendar)
         today_button = button("Today", "secondary", "calendar-check")
         today_button.clicked.connect(lambda: self.show_day(local_today()))
@@ -175,7 +148,7 @@ class DayOverviewDialog(QDialog):
             )
         self.reports_table.doubleClicked.connect(lambda index: self._view_report(index.row()))
         self.calendar.selectionChanged.connect(
-            lambda: self._load(_to_date(self.calendar.selectedDate()))
+            lambda: self._load(to_date(self.calendar.selectedDate()))
         )
         self.calendar.currentPageChanged.connect(lambda year, month: self._highlight(year, month))
 

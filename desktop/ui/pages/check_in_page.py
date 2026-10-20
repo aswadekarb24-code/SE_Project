@@ -11,6 +11,7 @@ the default printer after every token.
 from __future__ import annotations
 
 import sqlite3
+from datetime import date
 
 from PyQt6.QtCore import QSize, Qt
 from PyQt6.QtGui import QKeySequence, QShortcut
@@ -25,7 +26,7 @@ from PyQt6.QtWidgets import (
     QVBoxLayout,
 )
 
-from common.clock import now_iso
+from common.clock import local_today, now_iso
 from common.dto import PatientIntake, QueueTokenIssued
 from desktop.broadcast.broadcaster import Broadcaster
 from desktop.data.settings import AUTO_PRINT_SLIPS, get_flag, set_flag
@@ -34,6 +35,7 @@ from desktop.services.auth_service import AuthenticatedUser
 from desktop.services.department_service import list_departments
 from desktop.services.patient_service import (
     GENDERS,
+    MAX_AGE_YEARS,
     PatientValidationError,
     age_sex,
     search_patients,
@@ -49,9 +51,17 @@ from desktop.ui.components import (
     person_cell,
     search_field,
 )
+from desktop.ui.date_field import DateField
 from desktop.ui.pages.base import Page
 
 RECENT_LIMIT = 30
+
+
+def _years_before(day: date, years: int) -> date:
+    try:
+        return day.replace(year=day.year - years)
+    except ValueError:  # 29 February in a non-leap year
+        return day.replace(year=day.year - years, day=28)
 
 
 class CheckInPage(Page):
@@ -79,7 +89,13 @@ class CheckInPage(Page):
         # New patient ---------------------------------------------------
         new_card = Card("New patient")
         self.full_name_input = line_edit("e.g. Jane Doe")
-        self.dob_input = line_edit("YYYY-MM-DD")
+        today = local_today()
+        # Same range parse_dob accepts: not in the future, not over MAX_AGE_YEARS ago.
+        self.dob_input = DateField(
+            "YYYY-MM-DD",
+            minimum=_years_before(today, MAX_AGE_YEARS),
+            maximum=today,
+        )
         self.gender_input = combo_box()
         self.gender_input.addItem("Not specified", None)
         for gender in GENDERS:

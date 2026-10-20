@@ -107,6 +107,10 @@ a requirement.
   midnight-to-midnight, converted to UTC ranges, because timestamps are
   stored in UTC (matching on the UTC date would file a 1:00 AM IST
   check-in under the previous day).
+- **Calendar pickers on date inputs** (`desktop/ui/date_field.py`): date of
+  birth and follow-up date can be typed or picked from a calendar popup
+  (button in the field, or Alt+Down). The popup only offers dates the
+  field accepts: no future birth dates, no past follow-ups.
 - **Hourly cloud sync**: the default interval was 30 seconds; it is now
   3600 (`HMS_SYNC_INTERVAL_SECONDS` still overrides it). A first pass runs
   5 seconds after launch so sessions shorter than an hour still upload,

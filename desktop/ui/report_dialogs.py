@@ -29,6 +29,7 @@ from desktop.services.department_service import list_departments
 from desktop.services.patient_service import age_sex
 from desktop.services.report_service import ReportDraft, ReportValidationError, create_report
 from desktop.ui.components import Avatar, button, field, label, line_edit
+from desktop.ui.date_field import DateField
 
 _last_export_dir: str | None = None
 
@@ -103,7 +104,7 @@ class ReportEditorDialog(QDialog):
             150,
         )
         self.advice_input = _text_box("Diet, rest, warning signs to watch for...", 76)
-        self.follow_up_input = line_edit("YYYY-MM-DD (optional)")
+        self.follow_up_input = DateField("YYYY-MM-DD (optional)", minimum=local_today())
 
         columns = QHBoxLayout()
         columns.setSpacing(24)
